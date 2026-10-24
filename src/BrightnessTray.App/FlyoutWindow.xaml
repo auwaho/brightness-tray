@@ -3,10 +3,10 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="using:BrightnessTray.App.Controls"
         Title="BrightnessTray">
-  <Grid x:Name="FlyoutRoot" Width="380" Background="Transparent"
+  <Grid x:Name="FlyoutRoot" Width="360" Background="Transparent"
         KeyDown="Root_KeyDown">
     <Border x:Name="SurfaceBorder" Background="Transparent" CornerRadius="8">
-      <Grid x:Name="LayoutRoot" Width="380">
+      <Grid x:Name="LayoutRoot" Width="360">
         <Grid.Resources>
           <ResourceDictionary>
             <!-- WinUI's outer thumb border extends 2 DIP beyond each side of the thumb. -->

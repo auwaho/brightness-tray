@@ -58,3 +58,4 @@ foreach ($taskCase in $taskCases) {
     Write-Output "PASS Store packaging: $($taskCase.Name)"
 }
 Write-Output "$($taskCases.Count)/$($taskCases.Count) Store packaging checks passed."
+& (Join-Path $PSScriptRoot 'Store-PublishMetadata.Tests.ps1')

@@ -15,8 +15,8 @@ internal sealed class DemoDisplayDiscovery : IDisplayDiscovery
     {
         DiscoveryGate?.Wait();
         return new(
-        [new DemoDevice("demo-external", "DELL U2723QE", "External display · DDC/CI", _external),
-         new DemoDevice("demo-internal", "Laptop display", "Built-in display · WMI", _internal)], []);
+        [new DemoDevice("demo-external", "DELL U2723QE", "DDC/CI", _external),
+         new DemoDevice("demo-internal", "Laptop display", "WMI", _internal)], []);
     }
 
     private sealed class DemoBrightness(int value)

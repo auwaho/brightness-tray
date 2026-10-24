@@ -33,6 +33,10 @@ pwsh -File .\scripts\publish.ps1
 The publish folder is portable; copy it in full. Enable DDC/CI in your monitor's
 menu if needed. Some monitors, drivers and adapters do not support brightness control.
 
+Temporary communication errors get up to two retries, after 60 and 120 ms.
+Local diagnostics are saved in `%LOCALAPPDATA%\BrightnessTray\Logs\brightness.log`
+with one rotated backup (`brightness.log.1`), each limited to 256 KiB.
+
 ## MSIX
 
 Requires Windows SDK tools and PowerShell 7.5 or newer.

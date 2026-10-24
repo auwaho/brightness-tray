@@ -12,5 +12,9 @@
     <Compile Include="../../src/BrightnessTray.App/ViewModels/TrayBrightnessToolTip.cs" Link="ViewModels/TrayBrightnessToolTip.cs" />
     <Compile Include="../../src/BrightnessTray.Windows/DisplayEndpointMatcher.cs" Link="Windows/DisplayEndpointMatcher.cs" />
     <Compile Include="../../src/BrightnessTray.Windows/WmiBrightnessResult.cs" Link="Windows/WmiBrightnessResult.cs" />
+    <Compile Include="../../src/BrightnessTray.Windows/RetryingBrightnessDevice.cs" Link="Windows/RetryingBrightnessDevice.cs" />
+    <Compile Include="../../src/BrightnessTray.Windows/DdcBrightnessDevice.cs" Link="Windows/DdcBrightnessDevice.cs" />
+    <Compile Include="../../src/BrightnessTray.App/TrayIconHoverState.cs" Link="TrayIconHoverState.cs" />
+    <Compile Include="../../src/BrightnessTray.App/FlyoutAnimation.cs" Link="FlyoutAnimation.cs" />
   </ItemGroup>
 </Project>

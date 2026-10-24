@@ -299,10 +299,9 @@ public sealed partial class FlyoutWindow : Window
         var start = Stopwatch.GetTimestamp();
         _slideFrame = (_, _) =>
         {
-            var progress = Math.Min(1, Stopwatch.GetElapsedTime(start).TotalMilliseconds / AnimationDurationMs);
-            var remaining = 1 - progress;
+            var remaining = FlyoutAnimation.Remaining(Stopwatch.GetElapsedTime(start).TotalMilliseconds, AnimationDurationMs);
             AppWindow.Move(new PointInt32(destination.X, destination.Y + (int)Math.Round(offset * remaining)));
-            if (progress >= 1) StopSlide();
+            if (remaining <= 0) StopSlide();
         };
         CompositionTarget.Rendering += _slideFrame;
         return completion.Task;

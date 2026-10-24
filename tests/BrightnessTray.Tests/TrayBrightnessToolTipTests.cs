@@ -126,6 +126,91 @@ internal static class TrayBrightnessToolTipTests
         await tooltip.DisposeAsync();
     });
 
+    internal static Task VisiblePanelHoverAsync() => UiThreadContext.RunAsync(async () =>
+    {
+        var tracker = new NativeOperationTracker();
+        var brightness = 40;
+        var opened = new List<FakeDevice>();
+        var discovery = new FakeDiscovery(tracker, () =>
+        {
+            var device = new FakeDevice("panel", tracker) { Read = () => brightness, Set = value => brightness = value };
+            opened.Add(device);
+            return new([device], []);
+        });
+        await using var service = new BrightnessService(discovery);
+        await using var flyout = new FlyoutViewModel(service);
+        await flyout.RefreshAsync();
+        var row = flyout.Displays.Single();
+        var canRefresh = false;
+        var refreshNotifications = 0;
+        flyout.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName == nameof(FlyoutViewModel.IsRefreshing)) refreshNotifications++;
+        };
+        var text = string.Empty;
+        await using var tooltip = new TrayBrightnessToolTip(flyout, value => text = value, () => canRefresh);
+        await tooltip.RefreshOnHoverAsync();
+        await Task.Delay(1100);
+        await tooltip.RefreshOnHoverAsync();
+        Equal(1, discovery.DiscoverCount);
+        Equal(1, opened[0].ReadCount);
+        Equal(0, opened[0].DisposeCount);
+        Equal(0, refreshNotifications);
+        Equal(false, flyout.IsRefreshing);
+        Equal(true, row.IsAvailable);
+        Require(ReferenceEquals(row, flyout.Displays.Single()), "Hover replaced the visible display row.");
+
+        row.Brightness = 55;
+        Equal("Display panel: 55%", text);
+        await DrainAsync(flyout);
+        Equal(55, brightness);
+        Equal("Display panel: 55%", text);
+        // Skipped hovers must not consume the cooldown for a subsequent genuine hidden-panel entry.
+        brightness = 25;
+        canRefresh = true;
+        await tooltip.RefreshOnHoverAsync();
+        Equal(2, discovery.DiscoverCount);
+        Equal(2, refreshNotifications);
+        Equal("Display panel: 25%", text);
+        Require(!ReferenceEquals(row, flyout.Displays.Single()), "Hidden-panel hover did not refresh devices.");
+    });
+
+    internal static Task VisibleHoverDuringWriteAsync() => UiThreadContext.RunAsync(async () =>
+    {
+        var tracker = new NativeOperationTracker();
+        using var blocked = new BlockingNativeOperation();
+        var device = new FakeDevice("panel", tracker) { Set = value => { blocked.Execute(); return value; } };
+        var discovery = new FakeDiscovery(tracker, () => new([device], []));
+        await using var service = new BrightnessService(discovery);
+        await using var flyout = new FlyoutViewModel(service);
+        await flyout.RefreshAsync();
+        var row = flyout.Displays.Single();
+        var text = string.Empty;
+        await using var tooltip = new TrayBrightnessToolTip(flyout, value => text = value, () => false);
+        row.Brightness = 60;
+        try
+        {
+            await blocked.Entered;
+            var hover = tooltip.RefreshOnHoverAsync();
+            Require(hover.IsCompleted, "Visible-panel hover waited for an in-flight brightness write.");
+            await hover;
+            Equal(1, discovery.DiscoverCount);
+            Equal(1, device.ReadCount);
+            Equal(false, flyout.IsRefreshing);
+            Equal(true, row.IsAvailable);
+            row.Brightness = 75;
+            Equal("Display panel: 75%", text);
+            var dispose = tooltip.DisposeAsync().AsTask();
+            Require(dispose.IsCompleted, "Tooltip disposal waited for a refresh that should have been skipped.");
+            await dispose;
+        }
+        finally { blocked.Release(); }
+        await DrainAsync(flyout);
+        Equal(75d, row.Brightness);
+        Equal(2, device.SetCount);
+        Equal(0, device.DisposeCount);
+    });
+
     private static async Task DrainAsync(FlyoutViewModel flyout)
     {
         var rows = flyout.Displays.ToArray();

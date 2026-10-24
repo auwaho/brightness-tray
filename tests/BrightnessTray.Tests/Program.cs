@@ -6,6 +6,21 @@ using BrightnessTray.Windows;
 
 var tests = new (string Name, Func<Task> Run)[]
 {
+    ("Flyout opening and closing use the production linear interpolation", FlyoutAnimationTests.LinearInterpolationAsync),
+    ("Sparse animation frames remain valid without a midpoint sample", FlyoutAnimationTests.SparseFramesAsync),
+    ("DDC retry re-establishes the VCP range before writing a scaled value", DdcBrightnessTests.TransientFallbackRangeAsync),
+    ("Failed DDC fallback never writes with the previous API range", DdcBrightnessTests.FailedFallbackNeverWritesAsync),
+    ("DDC fallback commits its mode only with a valid range", DdcBrightnessTests.ReadFallbackAndInvalidRangeAsync),
+    ("Tray hover refresh fires once despite transient Shell hit-test failures", TrayIconHoverTests.StableEntryAsync),
+    ("Visible-panel tray hover keeps existing rows editable and tooltip values live", TrayBrightnessToolTipTests.VisiblePanelHoverAsync),
+    ("Visible-panel hover and tooltip disposal do not wait for pending native writes", TrayBrightnessToolTipTests.VisibleHoverDuringWriteAsync),
+    ("Slow tray scrolling uses visible rows without repeated discovery or pauses", TrayBrightnessTests.VisiblePanelSlowWheelAsync),
+    ("Only recognized native transport, busy and timeout errors are transient", RetryAndDiagnosticsTests.ClassificationAsync),
+    ("Brightness reads and absolute writes recover within two retries and report recovery", RetryAndDiagnosticsTests.RecoveryAsync),
+    ("Retry budgets preserve original errors and never retry permanent failures", RetryAndDiagnosticsTests.BudgetAndPermanentErrorsAsync),
+    ("New slider input survives a retry while refresh or exit waits for hardware work", RetryAndDiagnosticsTests.PendingInputAndLifetimeAsync),
+    ("Exhausted retries isolate displays and record final read, write and discovery failures", RetryAndDiagnosticsTests.FinalFailuresAsync),
+    ("Diagnostics rotate within size limits and tolerate concurrent writes and unavailable storage", RetryAndDiagnosticsTests.RotationAndStorageFailureAsync),
     ("Slider wheel changes only its display, accumulates fine input, clamps and freezes during refresh", SliderWheelTests.InputAndLimitsAsync),
     ("Slider wheel preserves progress on coarse drivers and stops after a write failure", SliderWheelTests.CoarseAndFailureAsync),
     ("Native tray tooltip follows requested, confirmed, unavailable and recovered displays", TrayBrightnessToolTipTests.ValuesAndRecoveryAsync),

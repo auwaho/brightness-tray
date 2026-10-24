@@ -13,11 +13,11 @@ internal static class TrayIconImage
         using var graphics = Graphics.FromImage(bitmap);
         graphics.SmoothingMode = SmoothingMode.AntiAlias;
         using var pen = new Pen(Color.White, 2.8f) { StartCap = LineCap.Round, EndCap = LineCap.Round };
-        graphics.DrawEllipse(pen, 9, 9, 14, 14);
+        graphics.DrawEllipse(pen, 8.5f, 8.5f, 15, 15);
         for (var index = 0; index < 8; index++)
         {
             var angle = index * Math.PI / 4;
-            graphics.DrawLine(pen, 16 + (float)Math.Cos(angle) * 11.5f, 16 + (float)Math.Sin(angle) * 11.5f,
+            graphics.DrawLine(pen, 16 + (float)Math.Cos(angle) * 12.5f, 16 + (float)Math.Sin(angle) * 12.5f,
                 16 + (float)Math.Cos(angle) * 14.5f, 16 + (float)Math.Sin(angle) * 14.5f);
         }
         var handle = bitmap.GetHicon();

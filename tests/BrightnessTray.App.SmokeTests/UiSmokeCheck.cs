@@ -33,14 +33,16 @@ internal static class UiSmokeCheck
             throw new InvalidOperationException($"The flyout did not open with its active acrylic configuration. Visible={window.IsVisible}, ActiveBackdrop={window.BackdropIsActive}, Foreground={NativeWindowPosition.ForegroundWindow}, Window={window.WindowHandle}, Frames={window.RevealFrameCount}.");
         RequireNoNativeFrame(window);
         window.RequireGrainConfiguration();
-        if (!window.RevealKeptSize || window.AnimationsEnabled && window.RevealFrameCount < 2)
-            throw new InvalidOperationException("The flyout did not animate at a fixed size.");
+        if (window.AnimationsEnabled && (window.RevealFrameCount == 0 || !window.RevealKeptSize || !window.RevealMonotonic))
+            throw new InvalidOperationException("The flyout did not animate monotonically at a fixed size.");
         var initialRevealFrames = window.RevealFrameCount;
+        var openingMotionMonotonic = window.RevealMonotonic;
         var halfwayRemaining = window.RevealHalfwayRemaining;
         var revealDistance = window.RevealDistance;
-        if (window.AnimationsEnabled && (halfwayRemaining is null || halfwayRemaining < 0.4 || halfwayRemaining > 0.6
-            || Math.Abs(revealDistance - window.Root.ActualHeight - 12) > 1))
-            throw new InvalidOperationException($"The opening motion still settles too early or is not gradual: halfway remaining={halfwayRemaining}.");
+        if (window.AnimationsEnabled && (Math.Abs(revealDistance - window.Root.ActualHeight - 12) > 1
+            || window.RevealStartPosition.Y <= window.RevealDestination.Y
+            || window.AppWindow.Position != window.RevealDestination))
+            throw new InvalidOperationException($"The opening motion did not travel its full distance to the final position: distance={revealDistance}, start={window.RevealStartPosition}, destination={window.RevealDestination}, actual={window.AppWindow.Position}.");
         if (!window.DispatcherQueue.HasThreadAccess || window.ViewModel.Displays.Count != 2)
             throw new InvalidOperationException("Demo did not create two displays on the WinUI thread.");
         if (nativeCapture) await NativeTransparencyCheck.RunAsync(window, outputDirectory);
@@ -180,6 +182,7 @@ internal static class UiSmokeCheck
         File.WriteAllText(Path.Combine(outputDirectory, "phase.txt"), "tray reversal");
         var dismissFrames = window.DismissFrameCount;
         var dismissHalfwayRemaining = window.DismissHalfwayRemaining;
+        var closingMotionMonotonic = window.DismissMonotonic;
         var interruptedOpen = window.ToggleFromTrayAsync();
         await window.ToggleFromTrayAsync();
         var resumedOpen = window.ToggleFromTrayAsync();
@@ -247,9 +250,10 @@ internal static class UiSmokeCheck
             await Task.Delay(150);
             File.WriteAllText(Path.Combine(outputDirectory, "phase.txt"), "outside closing finished");
             if (window.IsVisible) throw new InvalidOperationException("The flyout did not hide after losing focus.");
-            if (window.AnimationsEnabled && (window.DismissFrameCount < 2 || !window.DismissKeptSize
-                || window.DismissHalfwayRemaining is not (>= 0.4 and <= 0.6)
-                || window.AppWindow.Position.Y <= outsideClosePosition.Y || window.AppWindow.Size != outsideCloseSize))
+            if (window.AnimationsEnabled && (window.DismissFrameCount == 0 || !window.DismissKeptSize || !window.DismissMonotonic
+                || window.AppWindow.Position.X != outsideClosePosition.X
+                || window.AppWindow.Position.Y - outsideClosePosition.Y != outsideCloseSize.Height + (int)Math.Ceiling(12 * scale)
+                || window.AppWindow.Size != outsideCloseSize))
                 throw new InvalidOperationException($"Clicking outside did not use the reverse linear closing animation: frames={window.DismissFrameCount}, fixedSize={window.DismissKeptSize}, halfway={window.DismissHalfwayRemaining}, position={window.AppWindow.Position.Y}, start={outsideClosePosition.Y}.");
             File.WriteAllText(Path.Combine(outputDirectory, "phase.txt"), "close focus target");
             focusTarget.Close();
@@ -297,11 +301,13 @@ internal static class UiSmokeCheck
             inactivePreviewAllowed = true,
             initialRevealFrames,
             halfwayRemaining,
+            openingMotionMonotonic,
             revealDistance,
             openingAnimationDurationMs = FlyoutWindow.AnimationDurationMs,
             closingAnimationDurationMs = FlyoutWindow.AnimationDurationMs,
             dismissFrames,
             dismissHalfwayRemaining,
+            closingMotionMonotonic,
             trayDismissalReversesOpening = window.AnimationsEnabled,
             interruptedAnimationsReverseWithoutJump = window.AnimationsEnabled,
             sliderOuterThumbDiameter = 20,
@@ -371,8 +377,7 @@ internal static class UiSmokeCheck
         }
         await closing.WaitAsync(TimeSpan.FromSeconds(5));
         if (window.IsVisible) throw new InvalidOperationException("A tray press did not hide the open flyout.");
-        if (window.AnimationsEnabled && (window.DismissFrameCount < 2 || !window.DismissKeptSize
-            || window.DismissHalfwayRemaining is not (>= 0.4 and <= 0.6)
+        if (window.AnimationsEnabled && (window.DismissFrameCount == 0 || !window.DismissKeptSize || !window.DismissMonotonic
             || previousY - start.Y != size.Height + (int)Math.Ceiling(12 * scale)))
             throw new InvalidOperationException("The closing flyout did not reverse the full linear opening motion.");
     }

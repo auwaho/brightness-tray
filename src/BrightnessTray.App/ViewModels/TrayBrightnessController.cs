@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace BrightnessTray.App.ViewModels;
 
-internal sealed class TrayBrightnessController(FlyoutViewModel flyout) : IAsyncDisposable
+internal sealed class TrayBrightnessController(FlyoutViewModel flyout, Func<bool>? canRefresh = null) : IAsyncDisposable
 {
     private const int WheelDelta = 120;
     private const int StepPercent = 5;
@@ -38,12 +38,14 @@ internal sealed class TrayBrightnessController(FlyoutViewModel flyout) : IAsyncD
         {
             while (!_disposed && _pendingDelta != 0)
             {
-                if (_refreshRequested || flyout.IsRefreshing)
+                if (_refreshRequested)
                 {
                     _refreshRequested = false;
-                    // Read hardware at the start of each gesture, including when the flyout is hidden.
-                    await RefreshAsync();
+                    // Re-read hidden-panel gestures; an open panel already has current editable rows.
+                    if (canRefresh?.Invoke() != false) await RefreshAsync();
                 }
+                // Still join an explicit refresh so writes never use rows that are being replaced.
+                if (flyout.IsRefreshing) await RefreshAsync();
                 if (_disposed) break;
                 var steps = _pendingDelta / WheelDelta;
                 _pendingDelta %= WheelDelta;

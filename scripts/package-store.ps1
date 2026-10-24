@@ -20,24 +20,9 @@ $taskSdk = Get-ChildItem -LiteralPath $taskSdkRoot -Directory |
     Sort-Object { [version]$_.Name } -Descending | Select-Object -First 1
 if ($null -eq $taskSdk) { throw 'Windows SDK with MakeAppx is required.' }
 
-# Read the official framework identity from the exact Runtime package used by this build.
-$taskAssetsPath = Join-Path $taskRoot 'src/BrightnessTray.App/obj/project.assets.json'
-$taskAssets = Get-Content -LiteralPath $taskAssetsPath -Raw | ConvertFrom-Json -AsHashtable
-$taskRuntimeKey = @($taskAssets.libraries.Keys | Where-Object { $_ -like 'Microsoft.WindowsAppSDK.Runtime/*' })
-if ($taskRuntimeKey.Count -ne 1) { throw 'The Store publish did not resolve one Windows App SDK Runtime package.' }
-$taskRuntimeRelative = $taskAssets.libraries[$taskRuntimeKey[0]].path
-$taskRuntimePackage = @($taskAssets.packageFolders.Keys | ForEach-Object {
-    Join-Path $_ "$taskRuntimeRelative/tools/MSIX/win10-x64/Microsoft.WindowsAppRuntime.2.msix"
-} | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1)
-if ($taskRuntimePackage.Count -ne 1) { throw 'The resolved Windows App Runtime framework MSIX is missing.' }
-$taskZip = [IO.Compression.ZipFile]::OpenRead($taskRuntimePackage[0])
-try {
-    $taskReader = [IO.StreamReader]::new($taskZip.GetEntry('AppxManifest.xml').Open())
-    try { [xml]$taskFramework = $taskReader.ReadToEnd() } finally { $taskReader.Dispose() }
-} finally { $taskZip.Dispose() }
-if ($taskFramework.Package.Properties.Framework -ne 'true' -or $taskFramework.Package.Identity.ProcessorArchitecture -ne 'x64') {
-    throw 'The dependency is not an x64 framework package.'
-}
+# The sidecar belongs to this published output; ordinary restores may replace the shared obj assets.
+. (Join-Path $taskRoot 'packaging/Store-PublishMetadata.ps1')
+$taskFramework = Read-StorePublishMetadata -PublishDirectory $taskPublished -MetadataPath ($taskPublished + '.framework.json')
 
 New-Item -ItemType Directory -Path $taskOutput -Force | Out-Null
 $taskStage = [IO.Path]::GetFullPath((Join-Path $taskOutput 'staging'))
@@ -55,9 +40,9 @@ if (-not [string]::IsNullOrWhiteSpace($PackageName)) {
 }
 $taskDependency = $taskManifest.CreateElement('PackageDependency', $taskManifest.DocumentElement.NamespaceURI)
 foreach ($taskAttribute in @('Name', 'Publisher')) {
-    $taskDependency.SetAttribute($taskAttribute, [string]$taskFramework.Package.Identity.GetAttribute($taskAttribute))
+    $taskDependency.SetAttribute($taskAttribute, [string]$taskFramework[$taskAttribute])
 }
-$taskDependency.SetAttribute('MinVersion', [string]$taskFramework.Package.Identity.Version)
+$taskDependency.SetAttribute('MinVersion', [string]$taskFramework.Version)
 $taskManifest.Package.Dependencies.AppendChild($taskDependency) | Out-Null
 $taskManifest.Save((Join-Path $taskStage 'AppxManifest.xml'))
 $taskPackage = Join-Path $taskOutput "BrightnessTray_${Version}_x64_Store.msix"

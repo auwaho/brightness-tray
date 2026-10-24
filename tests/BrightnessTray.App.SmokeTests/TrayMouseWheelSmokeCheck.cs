@@ -101,7 +101,8 @@ internal sealed partial class NativeTrayIcon
             throw new InvalidOperationException("The standard native tooltip did not receive the display brightness text.");
     }
 
-    internal void ReplayHoverForTest(bool inside) => SetPointerOverIcon(inside);
+    internal void ReplayHoverForTest(bool inside) => UpdatePointerHover(
+        inside ? new Rectangle(0, 0, 24, 24) : null, inside ? Point.Empty : new Point(24, 24));
 
     internal void RequireRegisteredForTest()
     {

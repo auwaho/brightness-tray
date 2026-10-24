@@ -27,7 +27,6 @@ internal sealed class DdcBrightnessDevice(
         }
 
         // Some monitors expose VCP 0x10 while the high-level Windows API rejects brightness.
-        _useVcp = true;
         return ReadVcpBrightness();
     }
 
@@ -46,7 +45,6 @@ internal sealed class DdcBrightnessDevice(
         if (!_useVcp)
         {
             // The two APIs can report different ranges; establish the VCP range before retrying.
-            _useVcp = true;
             ReadVcpBrightness();
             nativeBrightness = _range.FromPercent(percent);
         }
@@ -72,7 +70,10 @@ internal sealed class DdcBrightnessDevice(
             throw NativeError("Brightness is unavailable. Check that the monitor supports DDC/CI and that it is enabled in the monitor menu.");
         if (maximum == 0)
             throw new InvalidOperationException("The monitor reported an empty DDC/CI brightness range.");
+        // Commit the mode and its range together, only after a successful probe. A transient
+        // fallback read must not leave retries using the high-level range for raw VCP writes.
         _range = new BrightnessRange(0, maximum);
+        _useVcp = true;
         return _range.ToPercent(current);
     }
 

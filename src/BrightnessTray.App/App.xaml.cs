@@ -1,5 +1,6 @@
 using System;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
@@ -8,6 +9,7 @@ using System.Threading.Tasks;
 using BrightnessTray.App.ViewModels;
 using BrightnessTray.App.Startup;
 using BrightnessTray.Core;
+using BrightnessTray.Core.Diagnostics;
 using BrightnessTray.Windows;
 using Microsoft.UI.Xaml;
 using Forms = System.Windows.Forms;
@@ -27,6 +29,9 @@ public partial class App : Application
     private BrightnessService? _service;
     private bool _exiting;
     private StartupMenuItem? _startupItem;
+    private readonly DiagnosticLog _diagnostics = new(Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "BrightnessTray", "Logs", "brightness.log"));
 
     public App()
     {
@@ -54,7 +59,8 @@ public partial class App : Application
             return;
         }
 
-        _service = new BrightnessService(new WindowsDisplayDiscovery());
+        _diagnostics.Write("Application started", detail: $"Version {typeof(App).Assembly.GetName().Version}");
+        _service = new BrightnessService(new WindowsDisplayDiscovery(_diagnostics), _diagnostics);
         _flyout = new FlyoutWindow(new FlyoutViewModel(_service));
         _icon = TrayIconImage.Create();
         Forms.WindowsFormsSynchronizationContext.AutoInstall = false;
@@ -71,7 +77,7 @@ public partial class App : Application
         _menu.Opening += async (_, _) => await _startupItem.RefreshAsync();
         _menu.Items.Add(new Forms.ToolStripSeparator());
         _menu.Items.Add("Exit", null, async (_, _) => await ExitAsync());
-        _trayBrightness = new TrayBrightnessController(_flyout.ViewModel);
+        _trayBrightness = new TrayBrightnessController(_flyout.ViewModel, () => !_flyout.IsVisible);
         _tray = new NativeTrayIcon(Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread())
         {
             Icon = _icon,
@@ -82,7 +88,7 @@ public partial class App : Application
         _trayToolTip = new TrayBrightnessToolTip(_flyout.ViewModel, text =>
         {
             if (_tray is not null) _tray.Text = text;
-        });
+        }, () => !_flyout.IsVisible);
         _tray.MouseHover += async () =>
         {
             try { await _trayToolTip.RefreshOnHoverAsync(); }
@@ -103,6 +109,7 @@ public partial class App : Application
 
     private void ReportFailure(Exception exception)
     {
+        _diagnostics.Write("Application operation failed", exception: exception);
         Environment.ExitCode = 1;
         Forms.MessageBox.Show($"The operation failed: {exception.Message}", "BrightnessTray");
     }
@@ -138,6 +145,7 @@ public partial class App : Application
             catch (Exception exception) { ReportFailure(exception); }
             finally
             {
+                _diagnostics.Write("Application stopped");
                 Exit();
             }
         }

@@ -8,7 +8,7 @@ internal sealed class WmiBrightnessDevice(string instanceName, string name, byte
 
     public string Id => "wmi:" + instanceName;
     public string Name { get; } = name;
-    public string ConnectionLabel => "Built-in display · WMI";
+    public string ConnectionLabel => "WMI";
     internal string InstanceName => instanceName;
 
     public int ReadBrightness()

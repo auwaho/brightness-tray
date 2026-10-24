@@ -147,6 +147,63 @@ internal static class TrayBrightnessTests
         Equal(85, second);
     });
 
+    internal static Task VisiblePanelSlowWheelAsync() => UiThreadContext.RunAsync(async () =>
+    {
+        var tracker = new NativeOperationTracker();
+        var low = 40;
+        var high = 80;
+        var opened = new List<FakeDevice>();
+        var discovery = new FakeDiscovery(tracker, () =>
+        {
+            var first = new FakeDevice("low", tracker) { Read = () => low, Set = value => low = value };
+            var second = new FakeDevice("high", tracker) { Read = () => high, Set = value => high = value };
+            opened.AddRange([first, second]);
+            return new([first, second], []);
+        });
+        await using var service = new BrightnessService(discovery);
+        await using var flyout = new FlyoutViewModel(service);
+        await flyout.RefreshAsync();
+        var rows = flyout.Displays.ToArray();
+        var canRefresh = false;
+        var refreshNotifications = 0;
+        flyout.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName == nameof(FlyoutViewModel.IsRefreshing)) refreshNotifications++;
+        };
+        var text = string.Empty;
+        await using var tooltip = new TrayBrightnessToolTip(flyout, value => text = value, () => canRefresh);
+        await using var wheel = new TrayBrightnessController(flyout, () => canRefresh);
+        await wheel.ScrollAsync(120);
+        Equal(true, rows.All(row => row.IsAvailable));
+        Equal("Display low: 45%\nDisplay high: 85%", text);
+        await DrainAsync(flyout);
+        await Task.Delay(1100);
+        await wheel.ScrollAsync(120);
+        Equal(true, rows.All(row => row.IsAvailable));
+        Equal("Display low: 50%\nDisplay high: 90%", text);
+        await DrainAsync(flyout);
+        Equal(50, low);
+        Equal(90, high);
+        Equal(1, discovery.DiscoverCount);
+        Equal(0, refreshNotifications);
+        Equal(false, flyout.IsRefreshing);
+        Equal(true, rows.Select((row, index) => ReferenceEquals(row, flyout.Displays[index])).All(same => same));
+        Equal(true, opened.All(device => device.ReadCount == 1 && device.DisposeCount == 0));
+
+        // Once hidden, the next gesture again reads externally changed hardware values.
+        await Task.Delay(1100);
+        low = 20;
+        high = 60;
+        canRefresh = true;
+        await wheel.ScrollAsync(120);
+        await DrainAsync(flyout);
+        Equal(25, low);
+        Equal(65, high);
+        Equal(2, discovery.DiscoverCount);
+        Equal(2, refreshNotifications);
+        Equal("Display low: 25%\nDisplay high: 65%", text);
+    });
+
     private static async Task DrainAsync(FlyoutViewModel flyout)
     {
         var rows = flyout.Displays.ToArray();

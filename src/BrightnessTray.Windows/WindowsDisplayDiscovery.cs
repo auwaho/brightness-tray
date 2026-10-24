@@ -1,10 +1,11 @@
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using BrightnessTray.Core.Displays;
+using BrightnessTray.Core.Diagnostics;
 
 namespace BrightnessTray.Windows;
 
-public sealed class WindowsDisplayDiscovery : IDisplayDiscovery
+public sealed class WindowsDisplayDiscovery(DiagnosticLog? diagnostics = null) : IDisplayDiscovery
 {
     public DisplayDiscoveryResult Discover()
     {
@@ -24,7 +25,7 @@ public sealed class WindowsDisplayDiscovery : IDisplayDiscovery
         }
     }
 
-    private static HashSet<string> DiscoverWmi(List<IBrightnessDevice> devices, List<DisplayIssue> issues,
+    private HashSet<string> DiscoverWmi(List<IBrightnessDevice> devices, List<DisplayIssue> issues,
         Dictionary<string, string> names)
     {
         var instances = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -32,7 +33,7 @@ public sealed class WindowsDisplayDiscovery : IDisplayDiscovery
         {
             using var session = new WmiSession();
             ReadWmiNames(session, names);
-            // Keep known inactive panels as disabled rows; readiness is checked when brightness is read.
+            // Retain known panels for diagnostics; unreadable panels are hidden by the UI.
             session.Query("SELECT InstanceName, Level FROM WmiMonitorBrightness", item =>
             {
                 if (WmiSession.ReadValue(item, "InstanceName") is not string instance || instances.Contains(NormalizeInstance(instance)))
@@ -41,7 +42,7 @@ public sealed class WindowsDisplayDiscovery : IDisplayDiscovery
                 var levels = WmiSession.ReadValue(item, "Level") is Array values
                     ? values.Cast<object>().Select(Convert.ToByte).Where(level => level <= 100).Distinct().Order().ToArray()
                     : [];
-                devices.Add(new WmiBrightnessDevice(instance, name, levels));
+                devices.Add(new RetryingBrightnessDevice(new WmiBrightnessDevice(instance, name, levels), diagnostics));
                 instances.Add(NormalizeInstance(instance));
             });
         }
@@ -51,6 +52,7 @@ public sealed class WindowsDisplayDiscovery : IDisplayDiscovery
         }
         catch (Exception exception)
         {
+            diagnostics?.Write("Discover WMI displays", exception: exception);
             issues.Add(new DisplayIssue("Built-in displays", $"Could not read WMI brightness: {exception.Message}"));
         }
         return instances;
@@ -75,7 +77,7 @@ public sealed class WindowsDisplayDiscovery : IDisplayDiscovery
         }
     }
 
-    private static void DiscoverDdc(List<IBrightnessDevice> devices, List<DisplayIssue> issues,
+    private void DiscoverDdc(List<IBrightnessDevice> devices, List<DisplayIssue> issues,
         HashSet<string> internalInstances, Dictionary<string, string> names)
     {
         var monitors = new List<nint>();
@@ -138,8 +140,8 @@ public sealed class WindowsDisplayDiscovery : IDisplayDiscovery
                     var handle = new SafePhysicalMonitorHandle(physical.Handle);
                     physicalMonitors[index].Handle = 0; // Ownership moves from the native array to SafeHandle.
                     var device = new DdcBrightnessDevice($"ddc:{identity}:{index}", name, handle);
-                    // The service reads availability into a disabled row instead of dropping the monitor.
-                    devices.Add(device);
+                    // Failed reads remain diagnostic snapshots; the UI hides unavailable devices.
+                    devices.Add(new RetryingBrightnessDevice(device, diagnostics));
                 }
             }
             finally

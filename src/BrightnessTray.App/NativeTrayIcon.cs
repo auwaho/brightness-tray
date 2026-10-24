@@ -16,11 +16,11 @@ internal sealed partial class NativeTrayIcon : IDisposable
     private readonly TrayMouseWheel _wheel;
     private readonly DispatcherQueueTimer _boundsTimer;
     private readonly uint _taskbarCreated;
+    private readonly TrayIconHoverState _hover = new();
     private Icon? _icon;
     private string _text = string.Empty;
     private Forms.ContextMenuStrip? _menu;
     private bool _visible;
-    private bool _pointerOverIcon;
     private bool _registered;
     private bool _version4;
     private bool _suppressSelect;
@@ -123,15 +123,13 @@ internal sealed partial class NativeTrayIcon : IDisposable
         // Avoid shell IPC while the pointer is elsewhere on the desktop.
         var bounds = root == IntPtr.Zero ? null : GetBounds();
         _wheel.UpdateRegion(MouseWheel is null ? null : bounds, root);
-        SetPointerOverIcon(bounds?.Contains(pointer) == true);
+        UpdatePointerHover(bounds, pointer);
     }
 
-    private void SetPointerOverIcon(bool inside)
+    private void UpdatePointerHover(Rectangle? bounds, Point pointer)
     {
-        inside &= !_disposed && _visible && _registered && _menu?.Visible != true;
-        if (_pointerOverIcon == inside) return;
-        _pointerOverIcon = inside;
-        if (inside) MouseHover?.Invoke();
+        if (_disposed || !_visible || !_registered || _menu?.Visible == true) _hover.Reset();
+        else if (_hover.Entered(bounds, pointer)) MouseHover?.Invoke();
     }
 
     private void UpdateIcon()
@@ -171,7 +169,7 @@ internal sealed partial class NativeTrayIcon : IDisposable
         _registered = false;
         _version4 = false;
         _suppressSelect = false;
-        _pointerOverIcon = false;
+        _hover.Reset();
         _wheel.UpdateRegion(null, IntPtr.Zero);
     }
 
@@ -215,6 +213,7 @@ internal sealed partial class NativeTrayIcon : IDisposable
     {
         if (_menu is null || _menu.IsDisposed || _menu.Visible) return;
         _wheel.UpdateRegion(null, IntPtr.Zero);
+        _hover.Reset();
         SetForegroundWindow(_window.Handle);
         _menu.Show(Forms.Cursor.Position, Forms.ToolStripDropDownDirection.AboveLeft);
     }

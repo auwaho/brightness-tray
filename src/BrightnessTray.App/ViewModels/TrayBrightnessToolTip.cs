@@ -13,6 +13,7 @@ internal sealed class TrayBrightnessToolTip : IAsyncDisposable
     private const string DefaultText = "BrightnessTray · Display brightness";
     private readonly FlyoutViewModel _flyout;
     private readonly Action<string> _setText;
+    private readonly Func<bool>? _canRefresh;
     private readonly HashSet<DisplayViewModel> _rows = [];
     private Task? _refreshTask;
     private long? _lastRefreshAttempt;
@@ -20,10 +21,11 @@ internal sealed class TrayBrightnessToolTip : IAsyncDisposable
     private bool _hasRefreshed;
     private bool _disposed;
 
-    internal TrayBrightnessToolTip(FlyoutViewModel flyout, Action<string> setText)
+    internal TrayBrightnessToolTip(FlyoutViewModel flyout, Action<string> setText, Func<bool>? canRefresh = null)
     {
         _flyout = flyout;
         _setText = setText;
+        _canRefresh = canRefresh;
         _hasRefreshed = flyout.Displays.Count > 0;
         _flyout.Displays.CollectionChanged += DisplaysChanged;
         _flyout.PropertyChanged += FlyoutChanged;
@@ -33,7 +35,8 @@ internal sealed class TrayBrightnessToolTip : IAsyncDisposable
 
     internal Task RefreshOnHoverAsync()
     {
-        if (_disposed) return Task.CompletedTask;
+        // The open panel already owns editable rows; a passive hover must not pause or replace them.
+        if (_disposed || _canRefresh?.Invoke() == false) return Task.CompletedTask;
         if (_refreshTask is { IsCompleted: false }) return _refreshTask;
         var now = Stopwatch.GetTimestamp();
         if (_lastRefreshAttempt.HasValue

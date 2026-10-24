@@ -1,8 +1,9 @@
 using BrightnessTray.Core.Displays;
+using BrightnessTray.Core.Diagnostics;
 
 namespace BrightnessTray.Core;
 
-public sealed class BrightnessService(IDisplayDiscovery discovery) : IAsyncDisposable
+public sealed class BrightnessService(IDisplayDiscovery discovery, DiagnosticLog? diagnostics = null) : IAsyncDisposable
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
     private List<IBrightnessDevice> _devices = [];
@@ -27,6 +28,7 @@ public sealed class BrightnessService(IDisplayDiscovery discovery) : IAsyncDispo
                 }
                 var issues = discovered.Issues.ToList();
                 issues.AddRange(DisposeDevices(_devices));
+                foreach (var issue in issues) diagnostics?.Write("Discover displays", issue.Name, detail: issue.Message);
                 _devices = replacements;
                 var displays = _devices.Select(device =>
                 {
@@ -39,12 +41,18 @@ public sealed class BrightnessService(IDisplayDiscovery discovery) : IAsyncDispo
                     }
                     catch (Exception exception)
                     {
+                        diagnostics?.Write("Read brightness failed", device.Name, exception);
                         return new DisplaySnapshot(device.Id, device.Name, device.ConnectionLabel,
                             null, exception.Message);
                     }
                 }).ToArray();
                 return new DisplayRefreshResult(displays, issues);
             }, CancellationToken.None).ConfigureAwait(false);
+        }
+        catch (Exception exception)
+        {
+            diagnostics?.Write("Refresh displays failed", exception: exception);
+            throw;
         }
         finally { _gate.Release(); }
     }
@@ -61,9 +69,17 @@ public sealed class BrightnessService(IDisplayDiscovery discovery) : IAsyncDispo
                 ?? throw new InvalidOperationException("Display is no longer available. Refresh the display list.");
             return await Task.Run(() =>
             {
-                var applied = device.SetBrightness(percent);
-                ValidatePercent(applied);
-                return applied;
+                try
+                {
+                    var applied = device.SetBrightness(percent);
+                    ValidatePercent(applied);
+                    return applied;
+                }
+                catch (Exception exception)
+                {
+                    diagnostics?.Write("Set brightness failed", device.Name, exception, $"Requested {percent}%");
+                    throw;
+                }
             }, CancellationToken.None).ConfigureAwait(false);
         }
         finally { _gate.Release(); }
@@ -78,6 +94,7 @@ public sealed class BrightnessService(IDisplayDiscovery discovery) : IAsyncDispo
             _disposed = true;
             var issues = await Task.Run(() => DisposeDevices(_devices)).ConfigureAwait(false);
             _devices.Clear();
+            foreach (var issue in issues) diagnostics?.Write("Dispose display failed", issue.Name, detail: issue.Message);
             if (issues.Count > 0)
                 throw new AggregateException(issues.Select(issue => new InvalidOperationException(issue.Message)));
         }
