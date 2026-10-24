@@ -1,0 +1,18 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+  </Configurations>
+  <Folder Name="/src/">
+    <Project Path="src/BrightnessTray.Core/BrightnessTray.Core.csproj" />
+    <Project Path="src/BrightnessTray.Windows/BrightnessTray.Windows.csproj" />
+    <Project Path="src/BrightnessTray.App/BrightnessTray.App.csproj">
+      <Platform Project="x64" />
+    </Project>
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/BrightnessTray.Tests/BrightnessTray.Tests.csproj" />
+    <Project Path="tests/BrightnessTray.App.SmokeTests/BrightnessTray.App.SmokeTests.csproj">
+      <Platform Project="x64" />
+    </Project>
+  </Folder>
+</Solution>

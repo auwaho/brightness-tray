@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/BrightnessTray.Core/BrightnessTray.Core.csproj" />
+    <Compile Include="../../src/BrightnessTray.App/ViewModels/ObservableObject.cs" Link="ViewModels/ObservableObject.cs" />
+    <Compile Include="../../src/BrightnessTray.App/ViewModels/DisplayViewModel.cs" Link="ViewModels/DisplayViewModel.cs" />
+    <Compile Include="../../src/BrightnessTray.App/ViewModels/FlyoutViewModel.cs" Link="ViewModels/FlyoutViewModel.cs" />
+    <Compile Include="../../src/BrightnessTray.App/ViewModels/TrayBrightnessController.cs" Link="ViewModels/TrayBrightnessController.cs" />
+    <Compile Include="../../src/BrightnessTray.App/ViewModels/TrayBrightnessToolTip.cs" Link="ViewModels/TrayBrightnessToolTip.cs" />
+    <Compile Include="../../src/BrightnessTray.Windows/DisplayEndpointMatcher.cs" Link="Windows/DisplayEndpointMatcher.cs" />
+    <Compile Include="../../src/BrightnessTray.Windows/WmiBrightnessResult.cs" Link="Windows/WmiBrightnessResult.cs" />
+  </ItemGroup>
+</Project>
