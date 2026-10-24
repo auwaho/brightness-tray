@@ -9,6 +9,18 @@
       <Grid x:Name="LayoutRoot" Width="360">
         <Grid.Resources>
           <ResourceDictionary>
+            <Style x:Key="TrayMenuButtonStyle" TargetType="Button" BasedOn="{StaticResource SubtleButtonStyle}">
+              <Setter Property="Height" Value="28" />
+              <Setter Property="MinHeight" Value="28" />
+              <Setter Property="Margin" Value="0,2" />
+              <Setter Property="Padding" Value="10,0" />
+              <Setter Property="CornerRadius" Value="4" />
+              <Setter Property="BorderThickness" Value="0" />
+              <Setter Property="UseSystemFocusVisuals" Value="False" />
+              <Setter Property="FontSize" Value="13" />
+              <Setter Property="HorizontalAlignment" Value="Stretch" />
+              <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            </Style>
             <!-- WinUI's outer thumb border extends 2 DIP beyond each side of the thumb. -->
             <x:Double x:Key="SliderHorizontalThumbWidth">16</x:Double>
             <x:Double x:Key="SliderHorizontalThumbHeight">16</x:Double>
@@ -39,6 +51,46 @@
         </Grid.RowDefinitions>
         <SystemBackdropElement x:Name="PanelBackdrop" Grid.RowSpan="2" IsHitTestVisible="False" />
         <Grid x:Name="GrainHost" Grid.RowSpan="2" IsHitTestVisible="False" />
+        <StackPanel x:Name="TrayMenuPanel" Grid.RowSpan="2" Padding="4" Visibility="Collapsed" KeyDown="TrayMenu_KeyDown"
+                    TabFocusNavigation="Cycle" GotFocus="TrayMenu_GotFocus" LostFocus="TrayMenu_LostFocus">
+          <Button x:Name="MenuOpenButton" Style="{StaticResource TrayMenuButtonStyle}" Tag="Open" Click="TrayMenu_Click" PointerEntered="TrayMenu_PointerEntered" AutomationProperties.Name="Open brightness">
+            <Grid ColumnSpacing="12">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="16" /><ColumnDefinition /></Grid.ColumnDefinitions>
+              <Viewbox Width="18" Height="18" Margin="-1,0" VerticalAlignment="Center">
+                <Path Width="32" Height="32" Stroke="{ThemeResource TextFillColorPrimaryBrush}" StrokeThickness="2.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                      Data="M23.5,16 A7.5,7.5 0 1 0 8.5,16 A7.5,7.5 0 1 0 23.5,16 M28.5,16 L30.5,16 M24.839,24.839 L26.253,26.253 M16,28.5 L16,30.5 M7.161,24.839 L5.747,26.253 M3.5,16 L1.5,16 M7.161,7.161 L5.747,5.747 M16,3.5 L16,1.5 M24.839,7.161 L26.253,5.747" />
+              </Viewbox>
+              <TextBlock Grid.Column="1" Text="Open brightness" VerticalAlignment="Center" />
+            </Grid>
+          </Button>
+          <Button x:Name="MenuRefreshButton" Style="{StaticResource TrayMenuButtonStyle}" Tag="Refresh" Click="TrayMenu_Click" PointerEntered="TrayMenu_PointerEntered" AutomationProperties.Name="Refresh displays">
+            <Grid ColumnSpacing="12">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="16" /><ColumnDefinition /></Grid.ColumnDefinitions>
+              <FontIcon Glyph="&#xE72C;" FontSize="16" />
+              <TextBlock Grid.Column="1" Text="Refresh displays" VerticalAlignment="Center" />
+            </Grid>
+          </Button>
+          <Border Height="1" Margin="8,3" Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+          <Grid x:Name="MenuStartupHost" Background="Transparent">
+            <Button x:Name="MenuStartupButton" Style="{StaticResource TrayMenuButtonStyle}" IsEnabled="False" Tag="Startup" Click="TrayMenu_Click" PointerEntered="TrayMenu_PointerEntered" AutomationProperties.Name="Start with Windows">
+              <Grid ColumnSpacing="12">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="16" /><ColumnDefinition /><ColumnDefinition Width="14" /></Grid.ColumnDefinitions>
+                <Path x:Name="MenuStartupIcon" Width="16" Height="16" Fill="{ThemeResource TextFillColorPrimaryBrush}"
+                      Data="M1,1 H7 V7 H1 Z M9,1 H15 V7 H9 Z M1,9 H7 V15 H1 Z M9,9 H15 V15 H9 Z" />
+                <TextBlock Grid.Column="1" Text="Start with Windows" VerticalAlignment="Center" />
+                <FontIcon x:Name="MenuStartupCheck" Grid.Column="2" Glyph="&#xE73E;" FontSize="14" Visibility="Collapsed" />
+              </Grid>
+            </Button>
+          </Grid>
+          <Border Height="1" Margin="8,3" Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+          <Button x:Name="MenuExitButton" Style="{StaticResource TrayMenuButtonStyle}" Tag="Exit" Click="TrayMenu_Click" PointerEntered="TrayMenu_PointerEntered" AutomationProperties.Name="Exit">
+            <Grid ColumnSpacing="12">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="16" /><ColumnDefinition /></Grid.ColumnDefinitions>
+              <FontIcon Glyph="&#xE8BB;" FontSize="14" />
+              <TextBlock Grid.Column="1" Text="Exit" VerticalAlignment="Center" />
+            </Grid>
+          </Button>
+        </StackPanel>
         <ScrollViewer x:Name="DisplayScroller" Margin="24,24,24,0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" MaxHeight="400">
           <StackPanel Spacing="12">
             <ItemsControl x:Name="DisplayList" ItemsSource="{Binding Displays}">
@@ -58,8 +110,6 @@
                                 StepFrequency="1" SmallChange="1" LargeChange="10"
                                 AutomationProperties.Name="{Binding Name}" AutomationProperties.HelpText="{Binding UnavailableReason}" />
                       </Grid>
-                      <TextBlock Text="{Binding ConnectionLabel}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                 Style="{ThemeResource CaptionTextBlockStyle}" TextWrapping="Wrap" />
                     </StackPanel>
                   </Border>
                 </DataTemplate>

@@ -23,7 +23,6 @@ public partial class App : Application
     private NativeTrayIcon? _tray;
     private TrayBrightnessController? _trayBrightness;
     private TrayBrightnessToolTip? _trayToolTip;
-    private Forms.ContextMenuStrip? _menu;
     private Icon? _icon;
     private FlyoutWindow? _flyout;
     private BrightnessService? _service;
@@ -64,27 +63,29 @@ public partial class App : Application
         _flyout = new FlyoutWindow(new FlyoutViewModel(_service));
         _icon = TrayIconImage.Create();
         Forms.WindowsFormsSynchronizationContext.AutoInstall = false;
-        _menu = new Forms.ContextMenuStrip();
-        _menu.Items.Add("Open brightness", null, (_, _) => _flyout.ShowNearTray());
-        _menu.Items.Add("Refresh displays", null, async (_, _) =>
-        {
-            await _flyout.RefreshOrShowAsync();
-        });
-        _menu.Items.Add(new Forms.ToolStripSeparator());
         _startupItem = new StartupMenuItem(WindowsStartupRegistration.Create(),
             message => Forms.MessageBox.Show(message, "BrightnessTray"));
-        _menu.Items.Add(_startupItem);
-        _menu.Opening += async (_, _) => await _startupItem.RefreshAsync();
-        _menu.Items.Add(new Forms.ToolStripSeparator());
-        _menu.Items.Add("Exit", null, async (_, _) => await ExitAsync());
+        _flyout.ConfigureTrayMenu(_startupItem, ExitAsync);
         _trayBrightness = new TrayBrightnessController(_flyout.ViewModel, () => !_flyout.IsVisible);
         _tray = new NativeTrayIcon(Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread())
         {
             Icon = _icon,
             Text = "BrightnessTray · Display brightness",
-            ContextMenuStrip = _menu,
+            IsContextMenuOpen = () => _flyout.IsTrayMenuVisible,
             Visible = true
         };
+        _tray.ContextMenuRequested += async () =>
+        {
+            try
+            {
+                var bounds = _tray.GetBounds();
+                var anchor = bounds is { } iconBounds
+                    ? new Point(iconBounds.Left + iconBounds.Width / 2, iconBounds.Top) : Forms.Cursor.Position;
+                await _flyout.ShowTrayMenuAsync(anchor);
+            }
+            catch (Exception exception) { ReportFailure(exception); }
+        };
+        _flyout.TrayMenuClosed += () => _tray?.ReturnFocusAfterMenu();
         _trayToolTip = new TrayBrightnessToolTip(_flyout.ViewModel, text =>
         {
             if (_tray is not null) _tray.Text = text;
@@ -134,7 +135,7 @@ public partial class App : Application
         finally
         {
             _tray?.Dispose();
-            _menu?.Dispose();
+            _startupItem?.Dispose();
             _icon?.Dispose();
             if (_ownsMutex) { _instance?.ReleaseMutex(); _ownsMutex = false; }
             _instance?.Dispose();

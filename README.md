@@ -1,7 +1,7 @@
 # BrightnessTray
 
 A small Windows 11 tray app for controlling each display's hardware brightness.
-Built with C# and WinUI 3, independently of PowerToys.
+Built with C# and WinUI 3.
 
 | Light | Dark |
 | --- | --- |

@@ -23,15 +23,15 @@ internal static class TrayMouseWheelSmokeCheck
         Require(!TrayMouseWheel.IsHit(Rectangle.Empty, 100, 100, 0, 0, 120), "An empty icon rectangle captured scrolling.");
 
         using var icon = TrayIconImage.Create();
-        using var menu = new Forms.ContextMenuStrip();
         using var tray = new NativeTrayIcon(dispatcher)
         {
             Icon = icon,
             Text = "BrightnessTray native tray input test",
-            ContextMenuStrip = menu,
             Visible = true,
         };
         var clicks = 0;
+        var menus = 0;
+        tray.ContextMenuRequested += () => menus++;
         var wheelCallbacks = 0;
         tray.MouseDown += (_, args) => { if (args.Button == Forms.MouseButtons.Left) clicks++; };
         tray.MouseWheel += _ => wheelCallbacks++;
@@ -52,7 +52,14 @@ internal static class TrayMouseWheelSmokeCheck
         Require(clicks == 1, "A mouse click plus NIN_SELECT toggled twice.");
         tray.SendNotificationForTest(0x0401);
         Require(clicks == 2, "Keyboard activation was lost.");
-        Require(ReferenceEquals(tray.ContextMenuStrip, menu), "The tray menu was replaced.");
+        tray.SendNotificationForTest(0x007B);
+        Require(menus == 1, "The shell context-menu request was lost.");
+        tray.IsContextMenuOpen = () => true;
+        var hoverBeforeMenu = hoverCount;
+        tray.ReplayHoverForTest(true);
+        tray.SendNotificationForTest(0x007B);
+        Require(hoverCount == hoverBeforeMenu && menus == 1, "An open menu triggered hover discovery or opened twice.");
+        tray.IsContextMenuOpen = () => false;
         tray.SendNotificationForTest(0x0201); // Recreate before the matching NIN_SELECT arrives.
         Require(clicks == 3, "The click before recreation was lost.");
         tray.RestartOwnRegistrationForTest();

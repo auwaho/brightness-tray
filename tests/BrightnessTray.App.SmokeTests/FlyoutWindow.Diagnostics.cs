@@ -8,6 +8,7 @@ namespace BrightnessTray.App;
 public sealed partial class FlyoutWindow
 {
     internal void RequireGrainConfiguration() => _grain.RequireConfiguration(_backdrop.IsMaterialActive, FlyoutRoot.ActualTheme);
+    internal Task InvokeTrayMenuCommandForTestAsync(string command) => RunTrayMenuCommandAsync(command);
     internal Task ReplayStationaryTrayPressAsync()
     {
         // Simulate the delayed callback at the original click position, even if the user moves the mouse.

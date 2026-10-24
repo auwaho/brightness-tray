@@ -8,11 +8,14 @@ internal sealed class DemoDisplayDiscovery : IDisplayDiscovery
 {
     private readonly DemoBrightness _external = new(65);
     private readonly DemoBrightness _internal = new(80);
+    private int _discoveryCount;
+    internal int DiscoveryCount => Volatile.Read(ref _discoveryCount);
     internal bool InternalAvailable { get => _internal.Available; set => _internal.Available = value; }
     internal int InternalWriteCount => _internal.WriteCount;
     internal ManualResetEventSlim? DiscoveryGate { get; set; }
     public DisplayDiscoveryResult Discover()
     {
+        Interlocked.Increment(ref _discoveryCount);
         DiscoveryGate?.Wait();
         return new(
         [new DemoDevice("demo-external", "DELL U2723QE", "DDC/CI", _external),

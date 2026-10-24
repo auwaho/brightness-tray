@@ -19,7 +19,6 @@ internal sealed partial class NativeTrayIcon : IDisposable
     private readonly TrayIconHoverState _hover = new();
     private Icon? _icon;
     private string _text = string.Empty;
-    private Forms.ContextMenuStrip? _menu;
     private bool _visible;
     private bool _registered;
     private bool _version4;
@@ -48,6 +47,8 @@ internal sealed partial class NativeTrayIcon : IDisposable
     internal event Forms.MouseEventHandler? MouseDown;
     internal event Action<int>? MouseWheel;
     internal event Action? MouseHover;
+    internal event Action? ContextMenuRequested;
+    internal Func<bool>? IsContextMenuOpen { get; set; }
     internal Icon? Icon
     {
         get => _icon;
@@ -81,16 +82,6 @@ internal sealed partial class NativeTrayIcon : IDisposable
             RefreshBounds(null, null);
         }
     }
-    internal Forms.ContextMenuStrip? ContextMenuStrip
-    {
-        get => _menu;
-        set
-        {
-            if (_menu is not null) _menu.Closed -= MenuClosed;
-            _menu = value;
-            if (_menu is not null) _menu.Closed += MenuClosed;
-        }
-    }
 
     internal Rectangle? GetBounds()
     {
@@ -111,7 +102,7 @@ internal sealed partial class NativeTrayIcon : IDisposable
         if (_visible && !_registered && Environment.TickCount64 - _lastRegisterAttempt >= 1000) UpdateIcon();
         var root = IntPtr.Zero;
         var pointer = Forms.Cursor.Position;
-        if (_visible && _registered && _menu?.Visible != true && (MouseWheel is not null || MouseHover is not null))
+        if (_visible && _registered && IsContextMenuOpen?.Invoke() != true && (MouseWheel is not null || MouseHover is not null))
         {
             root = GetAncestor(WindowFromPoint(pointer), 2);
             var name = new StringBuilder(96);
@@ -128,7 +119,7 @@ internal sealed partial class NativeTrayIcon : IDisposable
 
     private void UpdatePointerHover(Rectangle? bounds, Point pointer)
     {
-        if (_disposed || !_visible || !_registered || _menu?.Visible == true) _hover.Reset();
+        if (_disposed || !_visible || !_registered || IsContextMenuOpen?.Invoke() == true) _hover.Reset();
         else if (_hover.Entered(bounds, pointer)) MouseHover?.Invoke();
     }
 
@@ -211,14 +202,13 @@ internal sealed partial class NativeTrayIcon : IDisposable
 
     private void ShowMenu()
     {
-        if (_menu is null || _menu.IsDisposed || _menu.Visible) return;
+        if (IsContextMenuOpen?.Invoke() == true) return;
         _wheel.UpdateRegion(null, IntPtr.Zero);
         _hover.Reset();
-        SetForegroundWindow(_window.Handle);
-        _menu.Show(Forms.Cursor.Position, Forms.ToolStripDropDownDirection.AboveLeft);
+        ContextMenuRequested?.Invoke();
     }
 
-    private void MenuClosed(object? sender, Forms.ToolStripDropDownClosedEventArgs args)
+    internal void ReturnFocusAfterMenu()
     {
         if (_disposed || !_registered) return;
         var data = CreateData();
@@ -233,7 +223,6 @@ internal sealed partial class NativeTrayIcon : IDisposable
         _disposed = true;
         _boundsTimer.Stop();
         _boundsTimer.Tick -= RefreshBounds;
-        if (_menu is not null) _menu.Closed -= MenuClosed;
         RemoveIcon();
         _wheel.Dispose();
         _window.DestroyHandle();
@@ -296,9 +285,6 @@ internal sealed partial class NativeTrayIcon : IDisposable
     private static extern IntPtr GetAncestor(IntPtr window, uint flags);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     private static extern int GetClassName(IntPtr window, StringBuilder name, int capacity);
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool SetForegroundWindow(IntPtr window);
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool PostMessage(IntPtr window, uint message, IntPtr wParam, IntPtr lParam);

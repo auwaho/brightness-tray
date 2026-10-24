@@ -76,9 +76,9 @@ internal static class UiSmokeCheck
         sliders[0].Value = 73;
         await Task.Delay(30);
         var captions = Descendants(window.Root).OfType<TextBlock>().Select(text => text.Text).ToArray();
-        if (window.ViewModel.Displays.Any(row => !captions.Contains(row.ConnectionLabel))
+        if (window.ViewModel.Displays.Any(row => captions.Contains(row.ConnectionLabel))
             || captions.Any(text => text.StartsWith("Applying", StringComparison.Ordinal)))
-            throw new InvalidOperationException("A display card lost its connection caption or shows an applying caption.");
+            throw new InvalidOperationException("A compact display card shows a connection or applying caption.");
         await window.ViewModel.RefreshAsync();
         await Task.Delay(150);
         if (!notificationsOnUiThread || window.ViewModel.Displays[0].Brightness != 73)
@@ -318,7 +318,7 @@ internal static class UiSmokeCheck
             fixedStepWheelOnAllDisplays = true,
             nativeTrayBrightnessToolTip = true,
             nativeTrayWheelLifecycle = true,
-            connectionCaptionStableWhileApplying = true,
+            connectionCaptionsHidden = true,
             wheelOverEachSlider = true,
             iconOnlyRefreshInFullWidthFooter = true,
             footerHeight = 50,

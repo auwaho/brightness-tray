@@ -41,10 +41,15 @@ public partial class App : Application
         try
         {
             await TrayMouseWheelSmokeCheck.RunAsync(Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread());
-            window.ShowNearTray();
             await StartupSmokeCheck.RunAsync(menuItem, startup);
-            await UiSmokeCheck.RunAsync(window, discovery, errors, _outputDirectory,
-                Environment.GetCommandLineArgs().Contains("--native-capture"));
+            if (Environment.GetCommandLineArgs().Contains("--tray-menu"))
+                await TrayMenuSmokeCheck.RunAsync(window, menuItem, startup, discovery, errors, _outputDirectory);
+            else
+            {
+                window.ShowNearTray();
+                await UiSmokeCheck.RunAsync(window, discovery, errors, _outputDirectory,
+                    Environment.GetCommandLineArgs().Contains("--native-capture"));
+            }
         }
         catch (Exception exception) { ReportFailure(exception); }
         finally

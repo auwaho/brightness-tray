@@ -18,7 +18,6 @@ namespace BrightnessTray.App;
 
 public sealed partial class FlyoutWindow : Window
 {
-    private const double MinimumHeight = 220;
     internal const int AnimationDurationMs = 80;
     private bool _allowClose;
     private bool _preparing;
@@ -101,6 +100,7 @@ public sealed partial class FlyoutWindow : Window
 
     private void HideCore(bool clearTaskbarDismissal = true)
     {
+        var wasMenuOpen = IsTrayMenuVisible;
         if (clearTaskbarDismissal) _taskbarDismissedAt = null;
         _showGeneration++;
         _closing = false;
@@ -110,6 +110,7 @@ public sealed partial class FlyoutWindow : Window
         StopLayoutWait();
         NativeWindowPosition.SetCloaked(WindowHandle, false);
         _backdrop.SetInputActive(false);
+        if (wasMenuOpen) TrayMenuClosed?.Invoke();
     }
 
     public async void ShowNearTray()
@@ -118,6 +119,12 @@ public sealed partial class FlyoutWindow : Window
     }
 
     internal Task ShowNearTrayAsync()
+    {
+        SetTrayMenuMode(false);
+        return ShowCurrentAsync();
+    }
+
+    private Task ShowCurrentAsync()
     {
         _taskbarDismissedAt = null;
         if (_closing)
@@ -148,6 +155,7 @@ public sealed partial class FlyoutWindow : Window
 
     internal Task ToggleFromTrayAsync()
     {
+        if (_showingTrayMenu) return ShowNearTrayAsync();
         // A tray press can start dismissing the panel before the shell callback delivers MouseDown.
         var dismissedByThisPress = _taskbarDismissedAt is { } timestamp
             && Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds < 250
@@ -220,7 +228,12 @@ public sealed partial class FlyoutWindow : Window
             // Light-dismiss requires the flyout to acquire focus.
             if (!foregroundAcquired && _requireForeground) { Hide(); return; }
             // Populate and measure while hidden: no stale editable rows or intermediate visible sizes.
-            await ViewModel.RefreshAsync();
+            if (_showingTrayMenu)
+            {
+                if (_startupMenuItem is not null) await _startupMenuItem.RefreshAsync();
+                UpdateStartupMenu();
+            }
+            else await ViewModel.RefreshAsync();
             if (generation != _showGeneration || _allowClose) return;
             await WaitForLayoutFrameAsync();
             if (generation != _showGeneration || _allowClose) return;
@@ -240,6 +253,7 @@ public sealed partial class FlyoutWindow : Window
             _preparing = false;
             NativeWindowPosition.SetCloaked(WindowHandle, false);
             if (generation == _showGeneration && IsVisible) await SlideAsync(bounds);
+            if (generation == _showGeneration && IsTrayMenuVisible) MenuOpenButton.Focus(FocusState.Programmatic);
         }
         catch (Exception exception)
         {
@@ -251,7 +265,7 @@ public sealed partial class FlyoutWindow : Window
 
     private RectInt32 MeasureNearTray()
     {
-        var area = Forms.Screen.FromPoint(Forms.Cursor.Position).WorkingArea;
+        var area = Forms.Screen.FromPoint(_showingTrayMenu ? _menuAnchor : Forms.Cursor.Position).WorkingArea;
         // This move selects the target monitor's DPI; it must happen before the window is visible.
         AppWindow.Move(new PointInt32(Math.Max(area.Left, area.Right - 400), Math.Max(area.Top, area.Bottom - 300)));
         var scale = NativeWindowPosition.GetScale(WindowHandle);
@@ -259,8 +273,11 @@ public sealed partial class FlyoutWindow : Window
         FlyoutRoot.Measure(new global::Windows.Foundation.Size(FlyoutRoot.Width, double.PositiveInfinity));
         var width = (int)Math.Ceiling(FlyoutRoot.Width * scale);
         var margin = (int)Math.Ceiling(12 * scale);
-        var height = Math.Min((int)Math.Ceiling(Math.Max(MinimumHeight, FlyoutRoot.DesiredSize.Height) * scale),
+        var height = Math.Min((int)Math.Ceiling(FlyoutRoot.DesiredSize.Height * scale),
             Math.Max(1, area.Height - 2 * margin));
+        if (_showingTrayMenu)
+            return new RectInt32(Math.Max(area.Left + margin, Math.Min(_menuAnchor.X - width / 2, area.Right - width - margin)),
+                Math.Max(area.Top + margin, Math.Min(_menuAnchor.Y, area.Bottom - margin) - height), width, height);
         return new RectInt32(Math.Max(area.Left + margin, area.Right - width - margin),
             Math.Max(area.Top + margin, area.Bottom - height - margin), width, height);
     }
@@ -341,7 +358,7 @@ public sealed partial class FlyoutWindow : Window
 
     private void QueueResize()
     {
-        if (_resizeQueued || _allowClose || !IsVisible || _closing || _preparing || ViewModel.IsRefreshing) return;
+        if (_showingTrayMenu || _resizeQueued || _allowClose || !IsVisible || _closing || _preparing || ViewModel.IsRefreshing) return;
         _resizeQueued = DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
         {
             _resizeQueued = false;
@@ -351,7 +368,7 @@ public sealed partial class FlyoutWindow : Window
 
     private void ResizeVisibleFlyout()
     {
-        if (!IsVisible || _closing) return;
+        if (_showingTrayMenu || !IsVisible || _closing) return;
         // Keep the tray anchor while resizing; never visit the temporary DPI-selection position here.
         FlyoutRoot.UpdateLayout();
         FlyoutRoot.Measure(new global::Windows.Foundation.Size(FlyoutRoot.Width, double.PositiveInfinity));
@@ -359,7 +376,7 @@ public sealed partial class FlyoutWindow : Window
         var area = Forms.Screen.FromHandle(WindowHandle).WorkingArea;
         var margin = (int)Math.Ceiling(12 * scale);
         var width = AppWindow.Size.Width;
-        var height = Math.Min((int)Math.Ceiling(Math.Max(MinimumHeight, FlyoutRoot.DesiredSize.Height) * scale),
+        var height = Math.Min((int)Math.Ceiling(FlyoutRoot.DesiredSize.Height * scale),
             Math.Max(1, area.Height - 2 * margin));
         if (AppWindow.Size.Height == height) return;
         _openPosition = new PointInt32(AppWindow.Position.X, Math.Max(area.Top + margin, area.Bottom - height - margin));
