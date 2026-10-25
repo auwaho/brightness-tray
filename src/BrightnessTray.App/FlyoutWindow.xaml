@@ -101,7 +101,7 @@
             </Grid>
           </Button>
         </StackPanel>
-        <ScrollViewer x:Name="DisplayScroller" Margin="24,24,24,0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" MaxHeight="400">
+        <ScrollViewer x:Name="DisplayScroller" Margin="24,24,8,0" Padding="0,0,16,0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
           <StackPanel Spacing="12">
             <ItemsControl x:Name="DisplayList" ItemsSource="{Binding Displays}">
               <ItemsControl.ItemTemplate>

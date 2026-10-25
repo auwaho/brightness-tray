@@ -62,6 +62,7 @@ internal static class TrayMenuSmokeCheck
         await window.InvokeTrayMenuCommandForTestAsync("Open");
         Require(!window.IsTrayMenuVisible && window.IsVisible && window.Root.ActualWidth == 360 && window.ViewModel.Displays.Count == 2,
             "Open brightness did not restore the brightness panel.");
+        await DisplayListLayoutSmokeCheck.RunAsync(window, discovery, directory);
         foreach (var theme in new[] { ElementTheme.Light, ElementTheme.Dark })
         {
             window.Root.RequestedTheme = theme;

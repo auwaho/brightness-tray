@@ -12,6 +12,7 @@ Built with C# and WinUI 3.
 - Follows Windows **Transparency effects** changes without restarting; disabling it uses a solid background without grain.
 - Click the tray icon to toggle the panel; click outside to dismiss it.
 - Unavailable displays are hidden; refresh to rediscover them.
+- The panel grows within the screen's working area; its scrollbar stays beside the display cards.
 - Scroll over the tray icon to adjust all available displays by 5 percentage
   points per notch, keeping each display within 0–100%.
 - Scroll over a brightness slider to adjust just that display by 5 percentage points.

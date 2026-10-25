@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using BrightnessTray.Core.Displays;
 
@@ -8,6 +9,9 @@ internal sealed class DemoDisplayDiscovery : IDisplayDiscovery
 {
     private readonly DemoBrightness _external = new(65);
     private readonly DemoBrightness _internal = new(80);
+    private readonly DemoBrightness _third = new(50);
+    private readonly DemoBrightness _fourth = new(35);
+    internal int DisplayCount { get; set; } = 2;
     private int _discoveryCount;
     internal int DiscoveryCount => Volatile.Read(ref _discoveryCount);
     internal bool InternalAvailable { get => _internal.Available; set => _internal.Available = value; }
@@ -17,9 +21,14 @@ internal sealed class DemoDisplayDiscovery : IDisplayDiscovery
     {
         Interlocked.Increment(ref _discoveryCount);
         DiscoveryGate?.Wait();
-        return new(
-        [new DemoDevice("demo-external", "DELL U2723QE", "DDC/CI", _external),
-         new DemoDevice("demo-internal", "Laptop display", "WMI", _internal)], []);
+        var devices = new List<IBrightnessDevice>
+        {
+            new DemoDevice("demo-external", "DELL U2723QE", "DDC/CI", _external),
+            new DemoDevice("demo-internal", "Laptop display", "WMI", _internal),
+        };
+        if (DisplayCount >= 3) devices.Add(new DemoDevice("demo-third", "Display 3", "DDC/CI", _third));
+        if (DisplayCount >= 4) devices.Add(new DemoDevice("demo-fourth", "Display 4", "DDC/CI", _fourth));
+        return new(devices, []);
     }
 
     private sealed class DemoBrightness(int value)
