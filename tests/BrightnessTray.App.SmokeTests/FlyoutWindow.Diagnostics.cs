@@ -7,7 +7,14 @@ namespace BrightnessTray.App;
 // Compiled only by the UI test runner; observes the unmodified flyout motion.
 public sealed partial class FlyoutWindow
 {
-    internal void RequireGrainConfiguration() => _grain.RequireConfiguration(_backdrop.IsMaterialActive, FlyoutRoot.ActualTheme);
+    internal void RequireGrainConfiguration() => _grain.RequireConfiguration(_backdrop.IsGrainEnabled, FlyoutRoot.ActualTheme);
+    internal void EnableGrainForNativeProbe() => _grain.SetMaterial(true, FlyoutRoot.ActualTheme);
+    internal void RequireNativeRecipe() => _backdrop.RequireNativeRecipe(FlyoutRoot.ActualTheme == Microsoft.UI.Xaml.ElementTheme.Dark
+        ? Microsoft.UI.Composition.SystemBackdrops.SystemBackdropTheme.Dark
+        : Microsoft.UI.Composition.SystemBackdrops.SystemBackdropTheme.Light);
+    internal bool SystemTransparencyEnabled => _uiSettings.AdvancedEffectsEnabled;
+    internal Task DeliverTransparencyNotificationForTestAsync() =>
+        Task.Run(() => TransparencySettingsChanged(_uiSettings, null!));
     internal Task InvokeTrayMenuCommandForTestAsync(string command) => RunTrayMenuCommandAsync(command);
     internal Task ReplayStationaryTrayPressAsync()
     {

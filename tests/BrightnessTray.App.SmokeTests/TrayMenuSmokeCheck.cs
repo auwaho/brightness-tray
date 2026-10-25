@@ -43,12 +43,16 @@ internal static class TrayMenuSmokeCheck
             window.Root.RequestedTheme = theme;
             await Task.Delay(100);
             window.RequireGrainConfiguration();
+            File.WriteAllText(Path.Combine(directory, $"acrylic-{theme.ToString().ToLowerInvariant()}.json"),
+                JsonSerializer.Serialize(((FlyoutAcrylicBackdrop)window.PanelSystemBackdrop!).NativeRecipe,
+                    new JsonSerializerOptions { WriteIndented = true }));
             Require(VisualStateManager.GoToState(buttons[3], "PointerOver", false), "The menu item has no native hover state.");
             window.PanelRoot.Background = new SolidColorBrush(theme == ElementTheme.Light
                 ? global::Windows.UI.Color.FromArgb(255, 243, 243, 243) : global::Windows.UI.Color.FromArgb(255, 32, 32, 32));
             await CaptureAsync(window.Root, directory, $"tray-menu-{theme.ToString().ToLowerInvariant()}.png");
             window.PanelRoot.Background = null;
         }
+        await TransparencySmokeCheck.RunAsync(window, directory);
         await window.InvokeTrayMenuCommandForTestAsync("Startup");
         Require(registration.Status.IsEnabled && !window.IsVisible, "Startup command did not toggle the existing registration.");
         registration.Status = new(true, false, "Managed by Windows policy.");
@@ -67,6 +71,7 @@ internal static class TrayMenuSmokeCheck
             await CaptureAsync(window.Root, directory, $"brightness-compact-{theme.ToString().ToLowerInvariant()}.png");
             window.PanelRoot.Background = null;
         }
+        await TransparencySmokeCheck.RunAsync(window, directory);
         discovery.InternalAvailable = false;
         await window.RefreshOrShowAsync();
         await Task.Delay(100);
@@ -101,6 +106,7 @@ internal static class TrayMenuSmokeCheck
             success = true, menuWidth = 248, itemHeight = 28, nativeFrame = true, sharedAcrylicWindow = true,
             menuSkipsDisplayDiscovery = true, startupPolicyRespected = true, allFourCommands = true,
             lightDismissal = true, refreshKeepsPanelHidden = true, singleDisplayHeight,
+            liveTransparencyPolicy = true, transparencyDisablesGrain = true,
             actualWindowsStartupChanged = false, backdropCallbackErrors = errors.Count,
         }, new JsonSerializerOptions { WriteIndented = true }));
     }
@@ -110,7 +116,7 @@ internal static class TrayMenuSmokeCheck
         if (!condition) throw new InvalidOperationException(message);
     }
 
-    private static async Task CaptureAsync(UIElement root, string directory, string name)
+    internal static async Task CaptureAsync(UIElement root, string directory, string name)
     {
         var bitmap = new RenderTargetBitmap();
         await bitmap.RenderAsync(root);

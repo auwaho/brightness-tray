@@ -9,6 +9,7 @@ Built with C# and WinUI 3.
 
 - External displays via DDC/CI; built-in displays via WMI.
 - System theme, acrylic with subtle grain and an 80 ms slide animation.
+- Follows Windows **Transparency effects** changes without restarting; disabling it uses a solid background without grain.
 - Click the tray icon to toggle the panel; click outside to dismiss it.
 - Unavailable displays are hidden; refresh to rediscover them.
 - Scroll over the tray icon to adjust all available displays by 5 percentage
@@ -55,12 +56,17 @@ For a smaller Store build, run `pwsh -File .\scripts\package-store.ps1`.
 It creates an unsigned preview in `artifacts/msix/store`, with a shared Windows App
 Runtime dependency and bundled .NET. Before submission, rebuild with `-PackageName`
 and `-Publisher` matching Partner Center. The interface is the same in both builds.
+Also set `Properties/PublisherDisplayName` in `packaging/AppxManifest.xml` to the
+value from Partner Center before submission.
 
 ## Tests
 
 `build.ps1` runs regression and packaging checks. Run `pwsh -File .\scripts\test-ui.ps1`
 for UI checks and screenshots with virtual displays; it does not change hardware brightness.
+Leave the desktop idle during UI checks: switching apps or clicking can invalidate focus assertions.
 Add `-NativeCapture` to check desktop transparency and shadows on an unobstructed desktop.
 Use `-SharedRuntime` to test with an already installed Windows App Runtime 2.5.1+.
+The smoke executable also accepts `--acrylic-native` after its output directory
+for a controlled green-background comparison using only test-owned windows.
 All test code lives in `tests/`. The screenshots above use a solid backdrop for capture;
 actual acrylic depends on the desktop and Windows transparency settings.

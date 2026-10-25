@@ -26,18 +26,27 @@
             <x:Double x:Key="SliderHorizontalThumbHeight">16</x:Double>
             <ResourceDictionary.ThemeDictionaries>
               <ResourceDictionary x:Key="Default">
-                <SolidColorBrush x:Key="FooterTintBrush" Color="#30000000" />
-                <SolidColorBrush x:Key="FooterDividerBrush" Color="#48000000" />
+                <SolidColorBrush x:Key="OpaqueBackdropBrush" Color="#242424" />
+                <SolidColorBrush x:Key="DisplayCardFillBrush" Color="#0FFFFFFF" />
+                <SolidColorBrush x:Key="AcrylicDensityBrush" Color="#202020" Opacity="0.20" />
+                <SolidColorBrush x:Key="FooterTintBrush" Color="#39000000" />
+                <SolidColorBrush x:Key="FooterDividerBrush" Color="#4E000000" />
                 <SolidColorBrush x:Key="FlyoutStrokeBrush" Color="#14FFFFFF" />
                 <SolidColorBrush x:Key="DisplayCardStrokeBrush" Color="#18FFFFFF" />
               </ResourceDictionary>
               <ResourceDictionary x:Key="Light">
+                <SolidColorBrush x:Key="OpaqueBackdropBrush" Color="#F3F3F3" />
+                <SolidColorBrush x:Key="DisplayCardFillBrush" Color="{ThemeResource CardBackgroundFillColorDefault}" />
+                <SolidColorBrush x:Key="AcrylicDensityBrush" Color="#F3F3F3" Opacity="0.20" />
                 <SolidColorBrush x:Key="FooterTintBrush" Color="#0A000000" />
                 <SolidColorBrush x:Key="FooterDividerBrush" Color="#24000000" />
                 <SolidColorBrush x:Key="FlyoutStrokeBrush" Color="#18000000" />
                 <SolidColorBrush x:Key="DisplayCardStrokeBrush" Color="#14000000" />
               </ResourceDictionary>
               <ResourceDictionary x:Key="HighContrast">
+                <SolidColorBrush x:Key="OpaqueBackdropBrush" Color="{ThemeResource SystemColorWindowColor}" />
+                <SolidColorBrush x:Key="DisplayCardFillBrush" Color="{ThemeResource SystemColorWindowColor}" />
+                <SolidColorBrush x:Key="AcrylicDensityBrush" Color="Transparent" />
                 <SolidColorBrush x:Key="FooterTintBrush" Color="{ThemeResource SystemColorWindowColor}" />
                 <SolidColorBrush x:Key="FooterDividerBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
                 <SolidColorBrush x:Key="FlyoutStrokeBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
@@ -50,7 +59,8 @@
           <RowDefinition Height="*" /><RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
         <SystemBackdropElement x:Name="PanelBackdrop" Grid.RowSpan="2" IsHitTestVisible="False" />
-        <Grid x:Name="GrainHost" Grid.RowSpan="2" IsHitTestVisible="False" />
+        <Border x:Name="OpaqueBackdrop" Grid.RowSpan="2" Background="{ThemeResource OpaqueBackdropBrush}" Visibility="Collapsed" IsHitTestVisible="False" />
+        <Grid x:Name="GrainHost" Grid.RowSpan="2" Background="{ThemeResource AcrylicDensityBrush}" IsHitTestVisible="False" />
         <StackPanel x:Name="TrayMenuPanel" Grid.RowSpan="2" Padding="4" Visibility="Collapsed" KeyDown="TrayMenu_KeyDown"
                     TabFocusNavigation="Cycle" GotFocus="TrayMenu_GotFocus" LostFocus="TrayMenu_LostFocus">
           <Button x:Name="MenuOpenButton" Style="{StaticResource TrayMenuButtonStyle}" Tag="Open" Click="TrayMenu_Click" PointerEntered="TrayMenu_PointerEntered" AutomationProperties.Name="Open brightness">
@@ -96,7 +106,7 @@
             <ItemsControl x:Name="DisplayList" ItemsSource="{Binding Displays}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                  <Border x:Name="DisplayCard" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="16" Margin="0,0,0,12"
+                  <Border x:Name="DisplayCard" Background="{ThemeResource DisplayCardFillBrush}" CornerRadius="8" Padding="16" Margin="0,0,0,12"
                           BorderBrush="{ThemeResource DisplayCardStrokeBrush}" BorderThickness="1">
                     <StackPanel Spacing="8">
                       <Grid ColumnSpacing="12">

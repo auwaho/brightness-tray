@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.ExceptionServices;
@@ -229,21 +230,16 @@ internal static class UiSmokeCheck
 
         // Activating another window exercises the same deactivation path as clicking outside the flyout.
         File.WriteAllText(Path.Combine(outputDirectory, "phase.txt"), "outside activation");
-        using var focusTarget = new FocusTargetWindow
-        {
-            Text = "BrightnessTray UI check",
-            ShowInTaskbar = false,
-            Size = new System.Drawing.Size(100, 100),
-        };
+        await using var focusTarget = new FocusTargetWindow();
         try
         {
             File.WriteAllText(Path.Combine(outputDirectory, "phase.txt"), "show focus target");
-            focusTarget.Show();
+            await focusTarget.ShowAsync(outputDirectory);
             await Task.Delay(100);
             File.WriteAllText(Path.Combine(outputDirectory, "phase.txt"), "activate focus target");
             var outsideClosePosition = window.AppWindow.Position;
             var outsideCloseSize = window.AppWindow.Size;
-            focusTarget.Activate();
+            await focusTarget.ActivateAsync();
             File.WriteAllText(Path.Combine(outputDirectory, "phase.txt"), "focus target activated");
             if (window.AnimationsEnabled && (!window.IsVisible || !window.BackdropIsActive))
                 throw new InvalidOperationException("Clicking outside hid the flyout before its closing animation.");
@@ -256,7 +252,7 @@ internal static class UiSmokeCheck
                 || window.AppWindow.Size != outsideCloseSize))
                 throw new InvalidOperationException($"Clicking outside did not use the reverse linear closing animation: frames={window.DismissFrameCount}, fixedSize={window.DismissKeptSize}, halfway={window.DismissHalfwayRemaining}, position={window.AppWindow.Position.Y}, start={outsideClosePosition.Y}.");
             File.WriteAllText(Path.Combine(outputDirectory, "phase.txt"), "close focus target");
-            focusTarget.Close();
+            await focusTarget.DisposeAsync();
             File.WriteAllText(Path.Combine(outputDirectory, "phase.txt"), "focus target closed");
             await Task.Delay(100);
             File.WriteAllText(Path.Combine(outputDirectory, "phase.txt"), "reopen after outside");
@@ -276,7 +272,7 @@ internal static class UiSmokeCheck
             await canceledOpen.WaitAsync(TimeSpan.FromSeconds(5));
             if (window.IsVisible) throw new InvalidOperationException("A canceled opening made the flyout visible again.");
         }
-        finally { focusTarget.Close(); }
+        finally { await focusTarget.DisposeAsync(); }
         File.WriteAllText(Path.Combine(outputDirectory, "phase.txt"), "write final result");
         backdropErrors.ThrowIfAny();
         File.WriteAllText(Path.Combine(outputDirectory, "result.json"), JsonSerializer.Serialize(new
@@ -382,9 +378,58 @@ internal static class UiSmokeCheck
             throw new InvalidOperationException("The closing flyout did not reverse the full linear opening motion.");
     }
 
-    private sealed class FocusTargetWindow : System.Windows.Forms.Form
+    // A different app owns its input thread; do not mix another UI window into the flyout's dispatcher.
+    internal sealed class FocusTargetWindow : IAsyncDisposable
     {
-        protected override bool ShowWithoutActivation => true;
+        private Process? _process;
+        internal IntPtr Handle { get; private set; }
+
+        internal async Task ShowAsync(string outputDirectory, params string[] options)
+        {
+            var start = new ProcessStartInfo(Environment.ProcessPath
+                ?? throw new InvalidOperationException("The UI test executable path is unavailable."))
+                { UseShellExecute = false, CreateNoWindow = true };
+            start.ArgumentList.Add(Path.Combine(outputDirectory, "focus-target"));
+            start.ArgumentList.Add("--focus-target");
+            foreach (var option in options) start.ArgumentList.Add(option);
+            _process = Process.Start(start) ?? throw new InvalidOperationException("Could not start the outside focus target.");
+            var deadline = DateTime.UtcNow.AddSeconds(10);
+            while (DateTime.UtcNow < deadline && !_process.HasExited)
+            {
+                _process.Refresh();
+                Handle = _process.MainWindowHandle;
+                if (Handle != IntPtr.Zero) return;
+                await Task.Delay(25);
+            }
+            throw new InvalidOperationException("The outside focus target did not create its window.");
+        }
+
+        internal async Task ActivateAsync()
+        {
+            if (!NativeWindowPosition.TrySetForeground(Handle))
+                throw new InvalidOperationException("Could not activate the outside focus target.");
+            var deadline = DateTime.UtcNow.AddSeconds(2);
+            while (DateTime.UtcNow < deadline)
+            {
+                if (NativeWindowPosition.ForegroundWindow == Handle) return;
+                await Task.Delay(1);
+            }
+            throw new InvalidOperationException("The outside focus target did not become the foreground window.");
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            if (_process is not { } process) return;
+            _process = null;
+            try
+            {
+                if (process.HasExited) return;
+                process.CloseMainWindow();
+                try { await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(5)); }
+                catch (TimeoutException) { process.Kill(); await process.WaitForExitAsync(); }
+            }
+            finally { process.Dispose(); }
+        }
     }
 
     private static async Task WaitForMotionAsync(FlyoutWindow window, bool opening)
@@ -404,6 +449,7 @@ internal static class UiSmokeCheck
         var expected = window.Root.ActualTheme == ElementTheme.Dark ? SystemBackdropTheme.Dark : SystemBackdropTheme.Light;
         if (window.BackdropTheme != expected)
             throw new InvalidOperationException($"The acrylic theme did not follow the window: expected {expected}, received {window.BackdropTheme}.");
+        window.RequireNativeRecipe();
         window.RequireGrainConfiguration();
     }
 
@@ -413,8 +459,8 @@ internal static class UiSmokeCheck
         var refresh = (Button)window.Root.FindName("RefreshButton");
         var stroke = (Border)window.Root.FindName("SurfaceStroke");
         var surface = (Border)window.Root.FindName("SurfaceBorder");
-        var expectedDividerAlpha = window.Root.ActualTheme == ElementTheme.Dark ? 72 : 36;
-        var expectedFooterAlpha = window.Root.ActualTheme == ElementTheme.Dark ? 48 : 10;
+        var expectedDividerAlpha = window.Root.ActualTheme == ElementTheme.Dark ? 78 : 36;
+        var expectedFooterAlpha = window.Root.ActualTheme == ElementTheme.Dark ? 57 : 10;
         if (Math.Abs(footer.ActualWidth - window.PanelRoot.ActualWidth) > 1 || footer.Background is null
             || Math.Abs(footer.ActualHeight - 50) > 0.1
             || footer.Background is not SolidColorBrush { Color.A: > 0 and < 64 }

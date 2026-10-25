@@ -58,9 +58,11 @@ public sealed partial class FlyoutWindow : Window
         ViewModel.Displays.CollectionChanged += DisplayRowsChanged;
         ViewModel.PropertyChanged += ViewModelChanged;
         _grain = new FlyoutGrain(GrainHost);
-        _backdrop.MaterialChanged += UpdateGrain;
-        FlyoutRoot.ActualThemeChanged += (_, _) => UpdateGrain();
-        FlyoutRoot.Loaded += (_, _) => UpdateGrain();
+        _backdrop.MaterialChanged += UpdateBackdropAppearance;
+        FlyoutRoot.ActualThemeChanged += (_, _) => UpdateBackdropAppearance();
+        FlyoutRoot.Loaded += (_, _) => UpdateBackdropAppearance();
+        _uiSettings.AdvancedEffectsEnabledChanged += TransparencySettingsChanged;
+        _backdrop.SetTransparencyEnabled(_uiSettings.AdvancedEffectsEnabled);
         SystemBackdrop = new TransparentWindowBackdrop();
         PanelBackdrop.SystemBackdrop = _backdrop;
         var presenter = OverlappedPresenter.Create();
@@ -83,15 +85,25 @@ public sealed partial class FlyoutWindow : Window
             ViewModel.Displays.CollectionChanged -= DisplayRowsChanged;
             ViewModel.PropertyChanged -= ViewModelChanged;
             StopSlide(); StopLayoutWait();
-            _backdrop.MaterialChanged -= UpdateGrain;
+            _backdrop.MaterialChanged -= UpdateBackdropAppearance;
+            _uiSettings.AdvancedEffectsEnabledChanged -= TransparencySettingsChanged;
             _grain.Dispose();
         };
     }
 
-    private void UpdateGrain()
+    private void UpdateBackdropAppearance()
     {
-        if (!_allowClose) _grain.SetMaterial(_backdrop.IsMaterialActive, FlyoutRoot.ActualTheme);
+        if (_allowClose) return;
+        _grain.SetMaterial(_backdrop.IsGrainEnabled, FlyoutRoot.ActualTheme);
+        GrainHost.Opacity = _backdrop.TransparencyEnabled ? 1 : 0;
+        OpaqueBackdrop.Visibility = _backdrop.TransparencyEnabled ? Visibility.Collapsed : Visibility.Visible;
     }
+
+    private void TransparencySettingsChanged(UISettings sender, object args) =>
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            if (!_allowClose) _backdrop.SetTransparencyEnabled(_uiSettings.AdvancedEffectsEnabled);
+        });
 
     public bool IsVisible => AppWindow.IsVisible && !_preparing;
     internal IntPtr WindowHandle => WinRT.Interop.WindowNative.GetWindowHandle(this);

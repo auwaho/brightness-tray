@@ -14,6 +14,7 @@ public partial class App : Application
 {
     private readonly string _outputDirectory;
     private bool _failed;
+    private Window? _focusTarget;
 
     public App()
     {
@@ -25,6 +26,32 @@ public partial class App : Application
 
     protected override async void OnLaunched(LaunchActivatedEventArgs args)
     {
+        if (Environment.GetCommandLineArgs().Contains("--focus-target"))
+        {
+            _focusTarget = new Window { Title = "BrightnessTray UI check" };
+            _focusTarget.AppWindow.IsShownInSwitchers = false;
+            _focusTarget.AppWindow.Resize(new global::Windows.Graphics.SizeInt32(100, 100));
+            var arguments = Environment.GetCommandLineArgs();
+            var background = Array.IndexOf(arguments, "--acrylic-background");
+            if (background >= 0)
+            {
+                var presenter = (Microsoft.UI.Windowing.OverlappedPresenter)_focusTarget.AppWindow.Presenter;
+                presenter.SetBorderAndTitleBar(false, false);
+                presenter.IsAlwaysOnTop = true;
+                _focusTarget.Content = new Microsoft.UI.Xaml.Controls.Grid
+                {
+                    Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(global::Windows.UI.Color.FromArgb(255, 106, 132, 22)),
+                };
+                _focusTarget.AppWindow.MoveAndResize(new global::Windows.Graphics.RectInt32(
+                    int.Parse(arguments[background + 1], System.Globalization.CultureInfo.InvariantCulture),
+                    int.Parse(arguments[background + 2], System.Globalization.CultureInfo.InvariantCulture),
+                    int.Parse(arguments[background + 3], System.Globalization.CultureInfo.InvariantCulture),
+                    int.Parse(arguments[background + 4], System.Globalization.CultureInfo.InvariantCulture)));
+            }
+            _focusTarget.Closed += (_, _) => Exit();
+            _focusTarget.AppWindow.Show(activateWindow: false);
+            return;
+        }
         Directory.CreateDirectory(_outputDirectory);
         Forms.WindowsFormsSynchronizationContext.AutoInstall = false;
         using var errors = new BackdropCallbackErrorTracker();
@@ -42,7 +69,12 @@ public partial class App : Application
         {
             await TrayMouseWheelSmokeCheck.RunAsync(Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread());
             await StartupSmokeCheck.RunAsync(menuItem, startup);
-            if (Environment.GetCommandLineArgs().Contains("--tray-menu"))
+            if (Environment.GetCommandLineArgs().Contains("--acrylic-native"))
+            {
+                await window.ShowNearTrayAsync();
+                await AcrylicNativeSmokeCheck.RunAsync(window, errors, _outputDirectory);
+            }
+            else if (Environment.GetCommandLineArgs().Contains("--tray-menu"))
                 await TrayMenuSmokeCheck.RunAsync(window, menuItem, startup, discovery, errors, _outputDirectory);
             else
             {

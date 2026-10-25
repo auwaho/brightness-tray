@@ -123,7 +123,7 @@ internal static class NativeTransparencyCheck
         Math.Abs(sample.R - background.R) <= tolerance && Math.Abs(sample.G - background.G) <= tolerance
         && Math.Abs(sample.B - background.B) <= tolerance;
 
-    private static Bitmap CaptureOwnedArea(Rectangle rectangle, IntPtr flyout, IntPtr background)
+    internal static Bitmap CaptureOwnedArea(Rectangle rectangle, IntPtr flyout, IntPtr background)
     {
         // Refuse to capture if another window covers even part of these owned surfaces.
         for (var y = 0; y < rectangle.Height; y += 4)
