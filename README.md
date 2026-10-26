@@ -1,4 +1,4 @@
-# BrightnessTray
+# Brightness Tray
 
 A small Windows 11 tray app for controlling each display's hardware brightness.
 Built with C# and WinUI 3.
@@ -7,67 +7,21 @@ Built with C# and WinUI 3.
 | --- | --- |
 | ![Light appearance](assets/screenshots/light.png) | ![Dark appearance](assets/screenshots/dark.png) |
 
-- External displays via DDC/CI; built-in displays via WMI.
-- System theme, acrylic with subtle grain and an 80 ms slide animation.
-- Follows Windows **Transparency effects** changes without restarting; disabling it uses a solid background without grain.
-- Click the tray icon to toggle the panel; click outside to dismiss it.
-- Unavailable displays are hidden; refresh to rediscover them.
-- The panel grows within the screen's working area; its scrollbar stays beside the display cards.
-- Scroll over the tray icon to adjust all available displays by 5 percentage
-  points per notch, keeping each display within 0–100%.
-- Scroll over a brightness slider to adjust just that display by 5 percentage points.
-- Hover over the tray icon to see display names and brightness in its native
-  tooltip; values update as you scroll.
-- Optional **Start with Windows** in the tray menu, disabled by default.
+- Separate brightness controls for external (DDC/CI) and built-in (WMI) displays.
+- Mouse wheel control over the tray icon or individual sliders.
+- Windows light and dark themes, transparency, and an adaptive tray icon.
+- Optional startup with Windows.
+
+Enable DDC/CI in your monitor's settings if needed. Some displays, drivers and
+adapters do not support hardware brightness control.
 
 ## Build and run
 
 Requires Windows 11 x64, .NET 10 SDK and PowerShell 7.
-In Visual Studio, open `BrightnessTray.slnx`, select `Debug | x64` or
-`Release | x64`, and set `BrightnessTray.App` as the startup project.
 
 ```powershell
-pwsh -File .\scripts\build.ps1
 pwsh -File .\scripts\publish.ps1
 .\artifacts\publish\win-x64\BrightnessTray.exe
 ```
 
-The publish folder is portable; copy it in full. Enable DDC/CI in your monitor's
-menu if needed. Some monitors, drivers and adapters do not support brightness control.
-
-Temporary communication errors get up to two retries, after 60 and 120 ms.
-Local diagnostics are saved in `%LOCALAPPDATA%\BrightnessTray\Logs\brightness.log`
-with one rotated backup (`brightness.log.1`), each limited to 256 KiB.
-
-## MSIX
-
-Requires Windows SDK tools and PowerShell 7.5 or newer.
-
-```powershell
-pwsh -File .\scripts\package-msix.ps1
-```
-
-Outputs a self-contained MSIX and public development certificate in `artifacts/msix`.
-Only required Windows App SDK components are included; the .NET runtime is bundled.
-For local installation, trust the certificate in **Local Computer → Trusted People**.
-The script does not install the package or certificate. Distribution requires your own
-trusted signing certificate or Microsoft Store signing.
-
-For a smaller Store build, run `pwsh -File .\scripts\package-store.ps1`.
-It creates an unsigned preview in `artifacts/msix/store`, with a shared Windows App
-Runtime dependency and bundled .NET. Before submission, rebuild with `-PackageName`
-and `-Publisher` matching Partner Center. The interface is the same in both builds.
-Also set `Properties/PublisherDisplayName` in `packaging/AppxManifest.xml` to the
-value from Partner Center before submission.
-
-## Tests
-
-`build.ps1` runs regression and packaging checks. Run `pwsh -File .\scripts\test-ui.ps1`
-for UI checks and screenshots with virtual displays; it does not change hardware brightness.
-Leave the desktop idle during UI checks: switching apps or clicking can invalidate focus assertions.
-Add `-NativeCapture` to check desktop transparency and shadows on an unobstructed desktop.
-Use `-SharedRuntime` to test with an already installed Windows App Runtime 2.5.1+.
-The smoke executable also accepts `--acrylic-native` after its output directory
-for a controlled green-background comparison using only test-owned windows.
-All test code lives in `tests/`. The screenshots above use a solid backdrop for capture;
-actual acrylic depends on the desktop and Windows transparency settings.
+The publish folder is portable; copy it in full when moving the app.

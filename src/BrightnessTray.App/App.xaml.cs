@@ -23,7 +23,7 @@ public partial class App : Application
     private NativeTrayIcon? _tray;
     private TrayBrightnessController? _trayBrightness;
     private TrayBrightnessToolTip? _trayToolTip;
-    private Icon? _icon;
+    private TrayIconAppearance? _trayAppearance;
     private FlyoutWindow? _flyout;
     private BrightnessService? _service;
     private bool _exiting;
@@ -61,7 +61,6 @@ public partial class App : Application
         _diagnostics.Write("Application started", detail: $"Version {typeof(App).Assembly.GetName().Version}");
         _service = new BrightnessService(new WindowsDisplayDiscovery(_diagnostics), _diagnostics);
         _flyout = new FlyoutWindow(new FlyoutViewModel(_service));
-        _icon = TrayIconImage.Create();
         Forms.WindowsFormsSynchronizationContext.AutoInstall = false;
         _startupItem = new StartupMenuItem(WindowsStartupRegistration.Create(),
             message => Forms.MessageBox.Show(message, "BrightnessTray"));
@@ -69,11 +68,11 @@ public partial class App : Application
         _trayBrightness = new TrayBrightnessController(_flyout.ViewModel, () => !_flyout.IsVisible);
         _tray = new NativeTrayIcon(Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread())
         {
-            Icon = _icon,
             Text = "BrightnessTray · Display brightness",
             IsContextMenuOpen = () => _flyout.IsTrayMenuVisible,
             Visible = true
         };
+        _trayAppearance = new TrayIconAppearance(_tray);
         _tray.ContextMenuRequested += async () =>
         {
             try
@@ -134,9 +133,9 @@ public partial class App : Application
         catch (Exception exception) { ReportFailure(exception); }
         finally
         {
+            _trayAppearance?.Dispose();
             _tray?.Dispose();
             _startupItem?.Dispose();
-            _icon?.Dispose();
             if (_ownsMutex) { _instance?.ReleaseMutex(); _ownsMutex = false; }
             _instance?.Dispose();
             try

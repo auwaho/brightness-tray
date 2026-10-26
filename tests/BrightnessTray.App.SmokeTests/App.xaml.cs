@@ -54,6 +54,17 @@ public partial class App : Application
         }
         Directory.CreateDirectory(_outputDirectory);
         Forms.WindowsFormsSynchronizationContext.AutoInstall = false;
+        if (Environment.GetCommandLineArgs().Contains("--tray-icon-theme"))
+        {
+            try
+            {
+                await TrayIconAppearanceSmokeCheck.RunAsync(Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread(), _outputDirectory);
+                File.Copy(Path.Combine(_outputDirectory, "tray-icon-theme.json"), Path.Combine(_outputDirectory, "result.json"), true);
+            }
+            catch (Exception exception) { ReportFailure(exception); }
+            finally { Environment.ExitCode = _failed ? 1 : 0; Exit(); }
+            return;
+        }
         using var errors = new BackdropCallbackErrorTracker();
         var discovery = new DemoDisplayDiscovery();
         await using var service = new BrightnessService(discovery);
@@ -67,6 +78,7 @@ public partial class App : Application
         using var menuItem = new StartupMenuItem(startup, message => throw new InvalidOperationException(message));
         try
         {
+            await TrayIconAppearanceSmokeCheck.RunAsync(Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread(), _outputDirectory);
             await TrayMouseWheelSmokeCheck.RunAsync(Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread());
             await StartupSmokeCheck.RunAsync(menuItem, startup);
             if (Environment.GetCommandLineArgs().Contains("--acrylic-native"))

@@ -3,12 +3,22 @@ param(
     [ValidatePattern('^\d+\.\d+\.\d+\.0$')][string]$Version = '0.1.4.0',
     [string]$PackageName,
     [string]$Publisher,
+    [string]$PublisherDisplayName,
+    [ValidateNotNullOrEmpty()][string]$DisplayName = 'Brightness Tray',
     [switch]$SkipPublish
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
-if ([string]::IsNullOrWhiteSpace($PackageName) -ne [string]::IsNullOrWhiteSpace($Publisher)) {
-    throw 'Supply both PackageName and Publisher from Partner Center, or omit both for a development-identity preview.'
+$taskIdentityValues = @($PackageName, $Publisher, $PublisherDisplayName)
+$taskIdentityCount = @($taskIdentityValues | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }).Count
+if ($taskIdentityCount -ne 0 -and $taskIdentityCount -ne 3) {
+    throw 'Supply PackageName, Publisher and PublisherDisplayName from Partner Center together, or omit all three for a development-identity preview.'
+}
+if ($taskIdentityCount -eq 3 -and $Publisher -eq 'CN=BrightnessTray Development') {
+    throw 'A Store product identity must not use the development publisher.'
+}
+if ([string]::IsNullOrWhiteSpace($DisplayName)) {
+    throw 'DisplayName must match the reserved app name and must not be blank.'
 }
 $taskRoot = Split-Path $PSScriptRoot -Parent
 if (-not $SkipPublish) { & (Join-Path $PSScriptRoot 'publish.ps1') -Store }
@@ -37,7 +47,11 @@ $taskManifest.Package.Identity.Version = $Version
 if (-not [string]::IsNullOrWhiteSpace($PackageName)) {
     $taskManifest.Package.Identity.Name = $PackageName
     $taskManifest.Package.Identity.Publisher = $Publisher
+    $taskManifest.Package.Properties.PublisherDisplayName = $PublisherDisplayName
 }
+$taskManifest.Package.Properties.DisplayName = $DisplayName
+$taskManifest.Package.Applications.Application.VisualElements.DisplayName = $DisplayName
+$taskManifest.Package.Applications.Application.Extensions.Extension.StartupTask.DisplayName = $DisplayName
 $taskDependency = $taskManifest.CreateElement('PackageDependency', $taskManifest.DocumentElement.NamespaceURI)
 foreach ($taskAttribute in @('Name', 'Publisher')) {
     $taskDependency.SetAttribute($taskAttribute, [string]$taskFramework[$taskAttribute])
@@ -56,5 +70,7 @@ if ($LASTEXITCODE -ne 0) {
     ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $taskOutput 'validation.json')
 Write-Host "Unsigned Store package: $taskPackage"
 if ([string]::IsNullOrWhiteSpace($PackageName)) {
-    Write-Host 'Development identity preview. Rebuild with PackageName and Publisher from Partner Center before submission.'
+    Write-Host 'Development identity preview. Rebuild with PackageName, Publisher and PublisherDisplayName from Partner Center before submission.'
+} else {
+    Write-Host 'Product identity configured. Installation, WACK and Store certification remain separate release checks.'
 }

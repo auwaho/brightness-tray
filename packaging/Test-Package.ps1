@@ -76,7 +76,12 @@ try {
         UsesDevelopmentIdentity = $taskManifest.Package.Identity.Publisher -eq 'CN=BrightnessTray Development'
         WindowsAppRuntimeDependency = $taskFrameworkDependency
         DotNetSelfContained = $true
+        PackageName = $taskManifest.Package.Identity.Name
         Publisher = $taskManifest.Package.Identity.Publisher
+        PublisherDisplayName = $taskManifest.Package.Properties.PublisherDisplayName
+        DisplayName = $taskManifest.Package.Properties.DisplayName
+        Architecture = $taskManifest.Package.Identity.ProcessorArchitecture
+        MinWindowsVersion = $taskManifest.Package.Dependencies.TargetDeviceFamily.MinVersion
         Version = $taskManifest.Package.Identity.Version
         EntryCount = $taskZip.Entries.Count
         Bytes = (Get-Item -LiteralPath $PackagePath).Length

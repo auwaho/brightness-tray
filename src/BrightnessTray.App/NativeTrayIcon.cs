@@ -48,6 +48,7 @@ internal sealed partial class NativeTrayIcon : IDisposable
     internal event Action<int>? MouseWheel;
     internal event Action? MouseHover;
     internal event Action? ContextMenuRequested;
+    internal event Action? AppearanceChanged;
     internal Func<bool>? IsContextMenuOpen { get; set; }
     internal Icon? Icon
     {
@@ -170,7 +171,12 @@ internal sealed partial class NativeTrayIcon : IDisposable
         if ((uint)message.Msg == _taskbarCreated)
         {
             ResetRegistration();
+            AppearanceChanged?.Invoke();
             UpdateIcon();
+        }
+        else if (message.Msg is 0x001A or 0x031A or 0x0015) // Settings, theme or system colors changed.
+        {
+            AppearanceChanged?.Invoke();
         }
         else if (message.Msg == CallbackMessage)
         {

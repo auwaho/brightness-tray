@@ -9,3 +9,5 @@
 *.md text eol=lf
 *.yml text eol=lf
 *.png binary
+packaging/third-party/** -text
+packaging/third-party/**/*.rtf binary

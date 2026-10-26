@@ -5,6 +5,7 @@ $taskDirectory = Join-Path $taskRoot ('artifacts/packaging-tests/' + [guid]::New
 New-Item -ItemType Directory -Path $taskDirectory -Force | Out-Null
 $taskCases = @(
     @{ Name = 'Valid'; Error = $null },
+    @{ Name = 'ProductIdentity'; Error = $null },
     @{ Name = 'MissingFramework'; Error = 'framework dependency' },
     @{ Name = 'WrongPublisher'; Error = 'framework dependency' },
     @{ Name = 'OldFramework'; Error = 'framework dependency' },
@@ -16,6 +17,12 @@ $taskCases = @(
 )
 foreach ($taskCase in $taskCases) {
     [xml]$taskManifest = Get-Content -LiteralPath (Join-Path $taskRoot 'packaging/AppxManifest.xml') -Raw
+    if ($taskCase.Name -eq 'ProductIdentity') {
+        $taskManifest.Package.Identity.Name = 'Example.BrightnessTray'
+        $taskManifest.Package.Identity.Publisher = 'CN=00000000-0000-0000-0000-000000000001'
+        $taskManifest.Package.Properties.PublisherDisplayName = 'Example Publisher'
+        $taskManifest.Package.Properties.DisplayName = 'Brightness Tray'
+    }
     if ($taskCase.Name -ne 'MissingFramework') {
         $taskDependency = $taskManifest.CreateElement('PackageDependency', $taskManifest.DocumentElement.NamespaceURI)
         $taskDependency.SetAttribute('Name', 'Microsoft.WindowsAppRuntime.2')
@@ -52,10 +59,39 @@ foreach ($taskCase in $taskCases) {
     if ($null -eq $taskCase.Error) {
         if ($null -ne $taskError) { throw "Valid fixture rejected: $taskError" }
         if ($taskResult.Signed -or -not $taskResult.DotNetSelfContained) { throw 'Invalid Store result.' }
+        if ($taskResult.PackageName -ne $taskManifest.Package.Identity.Name -or
+            $taskResult.Publisher -ne $taskManifest.Package.Identity.Publisher -or
+            $taskResult.PublisherDisplayName -ne $taskManifest.Package.Properties.PublisherDisplayName -or
+            $taskResult.DisplayName -ne $taskManifest.Package.Properties.DisplayName -or
+            $taskResult.Architecture -ne 'x64' -or $taskResult.MinWindowsVersion -ne '10.0.22000.0') {
+            throw 'Package result did not preserve the manifest product identity or platform.'
+        }
+        if ($taskCase.Name -eq 'ProductIdentity' -and $taskResult.UsesDevelopmentIdentity) {
+            throw 'Configured product identity was reported as a development preview.'
+        }
     } elseif ($null -eq $taskError -or -not $taskError.Contains($taskCase.Error, [StringComparison]::OrdinalIgnoreCase)) {
         throw "Case $($taskCase.Name): expected '$($taskCase.Error)', got '$taskError'."
     }
     Write-Output "PASS Store packaging: $($taskCase.Name)"
 }
 Write-Output "$($taskCases.Count)/$($taskCases.Count) Store packaging checks passed."
+$taskIdentityCases = @(
+    @{ Name = 'MissingPublisher'; Arguments = @{ PackageName = 'Example.BrightnessTray'; PublisherDisplayName = 'Example Publisher' }; Error = 'Supply PackageName, Publisher and PublisherDisplayName' },
+    @{ Name = 'MissingPackageName'; Arguments = @{ Publisher = 'CN=Example'; PublisherDisplayName = 'Example Publisher' }; Error = 'Supply PackageName, Publisher and PublisherDisplayName' },
+    @{ Name = 'MissingPublisherDisplayName'; Arguments = @{ PackageName = 'Example.BrightnessTray'; Publisher = 'CN=Example' }; Error = 'Supply PackageName, Publisher and PublisherDisplayName' },
+    @{ Name = 'DevelopmentPublisher'; Arguments = @{ PackageName = 'Example.BrightnessTray'; Publisher = 'CN=BrightnessTray Development'; PublisherDisplayName = 'Example Publisher' }; Error = 'must not use the development publisher' },
+    @{ Name = 'BlankDisplayName'; Arguments = @{ DisplayName = ' ' }; Error = 'must not be blank' }
+)
+foreach ($taskCase in $taskIdentityCases) {
+    $taskError = $null
+    try {
+        $taskArguments = $taskCase.Arguments
+        & (Join-Path $taskRoot 'scripts/package-store.ps1') @taskArguments -SkipPublish | Out-Null
+    } catch { $taskError = $_.Exception.Message }
+    if ($null -eq $taskError -or -not $taskError.Contains($taskCase.Error, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Case $($taskCase.Name): expected '$($taskCase.Error)', got '$taskError'."
+    }
+    Write-Output "PASS Store identity preflight: $($taskCase.Name)"
+}
+Write-Output "$($taskIdentityCases.Count)/$($taskIdentityCases.Count) Store identity preflight checks passed."
 & (Join-Path $PSScriptRoot 'Store-PublishMetadata.Tests.ps1')

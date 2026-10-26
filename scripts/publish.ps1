@@ -20,6 +20,8 @@ try {
     if ($Store) { $taskPublishArguments += '-p:BrightnessTrayStoreBuild=true' }
     dotnet @taskPublishArguments
     if ($LASTEXITCODE -ne 0) { throw 'Publish failed.' }
+    & (Join-Path $taskRoot 'packaging/Copy-ThirdPartyNotices.ps1') -PublishDirectory $taskOutput `
+        -AssetsPath (Join-Path $taskRoot 'src/BrightnessTray.App/obj/project.assets.json')
     if ($Store) {
         . (Join-Path $taskRoot 'packaging/Store-PublishMetadata.ps1')
         Write-StorePublishMetadata -PublishDirectory $taskOutput -MetadataPath $taskMetadataPath `

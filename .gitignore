@@ -10,6 +10,14 @@
 .packages/
 artifacts/
 artifacts-build.log
+*.msix
+*.msixbundle
+*.msixupload
+*.appx
+*.appxbundle
+*.appxupload
+*.appxsym
+*.cer
 *.user
 *.suo
 *.log

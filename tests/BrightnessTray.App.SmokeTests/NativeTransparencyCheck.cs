@@ -96,7 +96,7 @@ internal static class NativeTransparencyCheck
         var shadowColor = capture.GetPixel(margin / 2, rectangle.Height / 2);
         if (backgroundColor.B - shadowColor.B < 5)
             throw new InvalidOperationException("The native window shadow is barely visible.");
-        using var icon = TrayIconImage.Create();
+        using var icon = TrayIconImage.Create(Color.White);
         using var iconBitmap = icon.ToBitmap();
         var hasVisiblePixel = false;
         var left = iconBitmap.Width;

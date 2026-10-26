@@ -1,0 +1,6 @@
+Component: C#/WinRT Runtime 2.2.0.48161
+Binary product version: 2.2.0.48161+8649ee3eeb2445ca2a36d80d878ef60b96a6c65d
+Source: https://github.com/microsoft/CsWinRT/blob/8649ee3eeb2445ca2a36d80d878ef60b96a6c65d/LICENSE
+Retrieved: 2026-10-26
+LICENSE.txt SHA256: 3D4ADA4E04D153D74F5BC4E5E6AEBD12EF20077716529C36089DC07F14FD0DCF
+The license text is retained unchanged. This file records its provenance.

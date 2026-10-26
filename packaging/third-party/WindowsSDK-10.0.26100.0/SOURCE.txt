@@ -1,0 +1,8 @@
+Component: Windows SDK legal texts for Microsoft.Windows.SDK.NET.Ref 10.0.26100.57
+SDK build: 10.0.26100.0
+Source: official installed Windows SDK, Windows Kits/10/Licenses/10.0.26100.0/
+Package license reference: https://aka.ms/WinSDKLicenseURL
+Retrieved: 2026-10-26
+sdk_license.rtf SHA256: 0F4A26AC9DC50066F8A1BFEAAF3F092D1B9E4791DF5487B9F3C31E7C3DC4D7F5
+sdk_third_party_notices.rtf SHA256: EBB6640A8246B39B70322C5CEC9AAD7A71E86EA7B86C9C604D3A7F3FF1B30E89
+The files are retained byte-for-byte. No SDK installation or network is required to copy them when publishing.
