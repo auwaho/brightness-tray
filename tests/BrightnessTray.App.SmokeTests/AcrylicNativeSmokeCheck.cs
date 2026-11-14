@@ -38,8 +38,8 @@ internal static class AcrylicNativeSmokeCheck
                 throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
             await Task.Delay(300);
             var host = (Grid)window.Root.FindName("GrainHost");
-            if (host.Background is not SolidColorBrush density || Math.Abs(density.Opacity - 0.20) > 0.00001)
-                throw new InvalidOperationException("The user-selected 20% overlay was not preserved.");
+            if (host.Background is not SolidColorBrush density || Math.Abs(density.Opacity - 0.16) > 0.00001)
+                throw new InvalidOperationException("The expected 16% density overlay was not preserved.");
 
             var baselineBackdrop = new BaselineAcrylicBackdrop();
             window.PanelSystemBackdrop = baselineBackdrop;
@@ -64,7 +64,7 @@ internal static class AcrylicNativeSmokeCheck
             errors.ThrowIfAny();
             var comparison = JsonSerializer.Serialize(new
             {
-                success = tuned.Spread < baseline.Spread * 0.85, baselineTint, tunedTint, overlayOpacity = 0.20,
+                success = tuned.Spread < baseline.Spread * 0.85, baselineTint, tunedTint, overlayOpacity = density.Opacity,
                 background = "#6A8416", baseline, tuned,
                 chromaReduction = 1 - tuned.Spread / baseline.Spread,
                 lumaChange = tuned.Luma - baseline.Luma,

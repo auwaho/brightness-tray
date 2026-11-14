@@ -28,7 +28,7 @@
               <ResourceDictionary x:Key="Default">
                 <SolidColorBrush x:Key="OpaqueBackdropBrush" Color="#242424" />
                 <SolidColorBrush x:Key="DisplayCardFillBrush" Color="#0FFFFFFF" />
-                <SolidColorBrush x:Key="AcrylicDensityBrush" Color="#202020" Opacity="0.20" />
+                <SolidColorBrush x:Key="AcrylicDensityBrush" Color="#202020" Opacity="0.16" />
                 <SolidColorBrush x:Key="FooterTintBrush" Color="#39000000" />
                 <SolidColorBrush x:Key="FooterDividerBrush" Color="#4E000000" />
                 <SolidColorBrush x:Key="FlyoutStrokeBrush" Color="#14FFFFFF" />
@@ -37,9 +37,9 @@
               <ResourceDictionary x:Key="Light">
                 <SolidColorBrush x:Key="OpaqueBackdropBrush" Color="#F3F3F3" />
                 <SolidColorBrush x:Key="DisplayCardFillBrush" Color="{ThemeResource CardBackgroundFillColorDefault}" />
-                <SolidColorBrush x:Key="AcrylicDensityBrush" Color="#F3F3F3" Opacity="0.20" />
+                <SolidColorBrush x:Key="AcrylicDensityBrush" Color="#F3F3F3" Opacity="0.16" />
                 <SolidColorBrush x:Key="FooterTintBrush" Color="#0A000000" />
-                <SolidColorBrush x:Key="FooterDividerBrush" Color="#24000000" />
+                <SolidColorBrush x:Key="FooterDividerBrush" Color="#0E000000" />
                 <SolidColorBrush x:Key="FlyoutStrokeBrush" Color="#18000000" />
                 <SolidColorBrush x:Key="DisplayCardStrokeBrush" Color="#14000000" />
               </ResourceDictionary>
@@ -134,7 +134,7 @@
             </ItemsControl>
           </StackPanel>
         </ScrollViewer>
-        <Border x:Name="FooterPanel" Grid.Row="1" Height="50" Padding="16,0" CornerRadius="0,0,8,8"
+        <Border x:Name="FooterPanel" Grid.Row="1" Height="49" Padding="16,0" CornerRadius="0,0,8,8"
                 Background="{ThemeResource FooterTintBrush}"
                 BorderBrush="{ThemeResource FooterDividerBrush}" BorderThickness="0,1,0,0">
           <Grid ColumnSpacing="12">

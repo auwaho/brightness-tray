@@ -1,6 +1,8 @@
 using System;
 using System.Threading.Tasks;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 
 namespace BrightnessTray.App;
 
@@ -30,6 +32,11 @@ internal static class TransparencySmokeCheck
                     Require(backdrop.IsGrainEnabled == (enabled && grainEnabled), "Grain did not follow the transparency preference.");
                     Require(((FrameworkElement)window.Root.FindName("OpaqueBackdrop")).Visibility
                         == (enabled ? Visibility.Collapsed : Visibility.Visible), "The opaque background did not follow the transparency preference.");
+                    var footer = (Border)window.Root.FindName("FooterPanel");
+                    Require(footer.Background is SolidColorBrush tint
+                        && tint.Color.A == (appearance == ElementTheme.Dark ? 57 : 10)
+                        && Math.Abs(tint.Opacity - (enabled && grainEnabled ? 0.85 : 1)) < 0.00001,
+                        "The footer tint did not soften with transparency or preserve its opaque color.");
                     window.RequireGrainConfiguration();
                     window.RequireNativeRecipe();
                     if (!enabled)

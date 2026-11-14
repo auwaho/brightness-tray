@@ -10,7 +10,7 @@ internal sealed partial class FlyoutGrain
 {
     internal void RequireConfiguration(bool active, ElementTheme theme)
     {
-        var expectedOpacity = active ? theme == ElementTheme.Dark ? 0.014f : 0.006f : 0;
+        var expectedOpacity = active ? theme == ElementTheme.Dark ? 0.016f : 0.007f : 0;
         if (Math.Abs(_visual.Opacity - expectedOpacity) > 0.00001f
             || _visual.Size != Vector2.Zero || _visual.RelativeSizeAdjustment != Vector2.One
             || _brush.Stretch != CompositionStretch.None

@@ -37,6 +37,7 @@ internal static class DisplayListLayoutSmokeCheck
                 window.Hide();
                 window.Root.RequestedTheme = theme;
                 await window.ShowNearTrayAsync();
+                await window.ViewModel.RefreshAsync();
                 await ScrollAsync(scroller, 0);
                 var scale = window.Root.XamlRoot.RasterizationScale;
                 var area = System.Windows.Forms.Screen.FromHandle(window.WindowHandle).WorkingArea;
@@ -86,6 +87,7 @@ internal static class DisplayListLayoutSmokeCheck
             window.Root.RequestedTheme = originalTheme;
             backdrop.SetTransparencyEnabled(originalTransparency);
             await window.ShowNearTrayAsync();
+            await window.ViewModel.RefreshAsync();
             window.AppWindow.MoveAndResize(originalBounds);
             await ScrollAsync(scroller, originalOffset);
         }
@@ -98,8 +100,8 @@ internal static class DisplayListLayoutSmokeCheck
         var scale = window.Root.XamlRoot.RasterizationScale;
         Require(Math.Abs(window.Root.ActualWidth - 360) <= 1 && Math.Abs(window.AppWindow.Size.Width / scale - 360) <= 1,
             "The display panel no longer measures 360 DIP wide.");
-        Require(Math.Abs(footer.ActualHeight - 50) <= 1 && window.FooterFits,
-            "The fixed 50 DIP footer is clipped or changed height.");
+        Require(Math.Abs(footer.ActualHeight - 49) <= 1 && window.FooterFits,
+            "The fixed 49 DIP footer is clipped or changed height.");
         var cards = Cards(window);
         Require(cards.Length == 4 && cards.All(card => Math.Abs(card.ActualWidth - 312) <= 1),
             "The scrollbar gutter changed the original 312 DIP card width.");

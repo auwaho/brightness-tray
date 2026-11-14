@@ -317,7 +317,7 @@ internal static class UiSmokeCheck
             connectionCaptionsHidden = true,
             wheelOverEachSlider = true,
             iconOnlyRefreshInFullWidthFooter = true,
-            footerHeight = 50,
+            footerHeight = 49,
             darkFooterDivider = true,
             subtleCompositionGrain = true,
             grainFollowsAcrylicStateAndTheme = true,
@@ -459,10 +459,10 @@ internal static class UiSmokeCheck
         var refresh = (Button)window.Root.FindName("RefreshButton");
         var stroke = (Border)window.Root.FindName("SurfaceStroke");
         var surface = (Border)window.Root.FindName("SurfaceBorder");
-        var expectedDividerAlpha = window.Root.ActualTheme == ElementTheme.Dark ? 78 : 36;
+        var expectedDividerAlpha = window.Root.ActualTheme == ElementTheme.Dark ? 78 : 14;
         var expectedFooterAlpha = window.Root.ActualTheme == ElementTheme.Dark ? 57 : 10;
         if (Math.Abs(footer.ActualWidth - window.PanelRoot.ActualWidth) > 1 || footer.Background is null
-            || Math.Abs(footer.ActualHeight - 50) > 0.1
+            || Math.Abs(footer.ActualHeight - 49) > 0.1
             || footer.Background is not SolidColorBrush { Color.A: > 0 and < 64 }
             || ((SolidColorBrush)footer.Background).Color.A != expectedFooterAlpha
             || footer.BorderBrush is not SolidColorBrush { Color: { R: 0, G: 0, B: 0, A: > 0 and < 128 } }

@@ -65,6 +65,13 @@ public partial class App : Application
             finally { Environment.ExitCode = _failed ? 1 : 0; Exit(); }
             return;
         }
+        if (Environment.GetCommandLineArgs().Contains("--cached-opening"))
+        {
+            try { await CachedOpeningSmokeCheck.RunAsync(_outputDirectory); }
+            catch (Exception exception) { ReportFailure(exception); }
+            finally { Environment.ExitCode = _failed ? 1 : 0; Exit(); }
+            return;
+        }
         using var errors = new BackdropCallbackErrorTracker();
         var discovery = new DemoDisplayDiscovery();
         await using var service = new BrightnessService(discovery);
@@ -83,6 +90,7 @@ public partial class App : Application
             await StartupSmokeCheck.RunAsync(menuItem, startup);
             if (Environment.GetCommandLineArgs().Contains("--acrylic-native"))
             {
+                await viewModel.RefreshAsync();
                 await window.ShowNearTrayAsync();
                 await AcrylicNativeSmokeCheck.RunAsync(window, errors, _outputDirectory);
             }
@@ -90,6 +98,8 @@ public partial class App : Application
                 await TrayMenuSmokeCheck.RunAsync(window, menuItem, startup, discovery, errors, _outputDirectory);
             else
             {
+                // Material and motion checks use a populated cache; cold discovery is checked separately.
+                await viewModel.RefreshAsync();
                 window.ShowNearTray();
                 await UiSmokeCheck.RunAsync(window, discovery, errors, _outputDirectory,
                     Environment.GetCommandLineArgs().Contains("--native-capture"));

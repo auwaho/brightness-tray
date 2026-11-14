@@ -60,6 +60,7 @@ internal static class TrayMenuSmokeCheck
         Require(!buttons[2].IsEnabled && ((FontIcon)window.Root.FindName("MenuStartupCheck")).Visibility == Visibility.Visible,
             "The menu lost the startup checkmark or ignored Windows policy.");
         await window.InvokeTrayMenuCommandForTestAsync("Open");
+        await window.ViewModel.RefreshAsync();
         Require(!window.IsTrayMenuVisible && window.IsVisible && window.Root.ActualWidth == 360 && window.ViewModel.Displays.Count == 2,
             "Open brightness did not restore the brightness panel.");
         await DisplayListLayoutSmokeCheck.RunAsync(window, discovery, directory);
@@ -81,6 +82,7 @@ internal static class TrayMenuSmokeCheck
         var singleDisplayHeight = window.Root.ActualHeight;
         window.Hide();
         await window.ShowNearTrayAsync();
+        await window.ViewModel.RefreshAsync();
         Require(Math.Abs(window.Root.ActualHeight - singleDisplayHeight) < 1,
             "Opening and refreshing a single-display panel use different heights.");
         window.PanelRoot.Background = new SolidColorBrush(global::Windows.UI.Color.FromArgb(255, 32, 32, 32));

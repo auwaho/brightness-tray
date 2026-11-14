@@ -97,6 +97,8 @@ public sealed partial class FlyoutWindow : Window
         _grain.SetMaterial(_backdrop.IsGrainEnabled, FlyoutRoot.ActualTheme);
         GrainHost.Opacity = _backdrop.TransparencyEnabled ? 1 : 0;
         OpaqueBackdrop.Visibility = _backdrop.TransparencyEnabled ? Visibility.Collapsed : Visibility.Visible;
+        // Keep opaque/high-contrast colors intact; soften only the acrylic footer's tint.
+        FooterPanel.Background.Opacity = _backdrop.IsGrainEnabled ? 0.85 : 1;
     }
 
     private void TransparencySettingsChanged(UISettings sender, object args) =>
@@ -230,7 +232,7 @@ public sealed partial class FlyoutWindow : Window
     {
         try
         {
-            // Claim focus during the tray callback; DWM conceals the window until its data/layout are ready.
+            // Claim focus during the tray callback; DWM conceals the window until its layout is ready.
             _preparing = true;
             NativeWindowPosition.SetCloaked(WindowHandle, true);
             _backdrop.SetInputActive(true);
@@ -239,13 +241,14 @@ public sealed partial class FlyoutWindow : Window
             var foregroundAcquired = NativeWindowPosition.TrySetForeground(WindowHandle);
             // Light-dismiss requires the flyout to acquire focus.
             if (!foregroundAcquired && _requireForeground) { Hide(); return; }
-            // Populate and measure while hidden: no stale editable rows or intermediate visible sizes.
+            // Show cached rows without waiting for hardware. The view model owns the refresh task,
+            // pauses old rows before yielding, reports failures in Status and drains it on exit.
             if (_showingTrayMenu)
             {
                 if (_startupMenuItem is not null) await _startupMenuItem.RefreshAsync();
                 UpdateStartupMenu();
             }
-            else await ViewModel.RefreshAsync();
+            else _ = ViewModel.RefreshAsync();
             if (generation != _showGeneration || _allowClose) return;
             await WaitForLayoutFrameAsync();
             if (generation != _showGeneration || _allowClose) return;
@@ -272,7 +275,13 @@ public sealed partial class FlyoutWindow : Window
             if (generation == _showGeneration) Hide();
             completion.TrySetException(exception);
         }
-        finally { completion.TrySetResult(); }
+        finally
+        {
+            completion.TrySetResult();
+            // Refresh can finish while layout/reveal is in progress, when resize notifications
+            // are deferred. Recheck after opening; later refreshes queue their own resize.
+            QueueResize();
+        }
     }
 
     private RectInt32 MeasureNearTray()

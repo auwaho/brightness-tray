@@ -32,7 +32,7 @@ internal sealed partial class FlyoutGrain : IDisposable
     }
 
     internal void SetMaterial(bool active, ElementTheme theme) =>
-        _visual.Opacity = active ? theme == ElementTheme.Dark ? 0.014f : 0.006f : 0;
+        _visual.Opacity = active ? theme == ElementTheme.Dark ? 0.016f : 0.007f : 0;
 
     public void Dispose()
     {
